@@ -1,6 +1,6 @@
 # 实施记录
 
-状态：实现与定向验证完成，准备提交并推送两个用户指定的仓库。
+状态：实现与定向验证完成。核心工作提交 ac458ff，独立 skill 提交 9fd78fc；本任务按用户授权向两个指定仓库发布源码。
 
 1. CLI 新建项目与共享模板。
 2. 独立开发 skill、安装/更新引导和语言参考。
@@ -31,4 +31,4 @@
 
 - 改前源码备份：target/onboarding-before.Vgoy97/source.tar.gz。
 - 新官方发行公钥仅公开pub，私钥留在被忽略的本机目录；已验证PKCS#8 v2符合maker并匹配skill公钥，不打印/提交私钥。
-- 为有限磁盘验证临时移走的旧CLI缓存将归档至同一backup目录，可恢复。未删除业务数据。
+- 为有限磁盘验证临时移走的6份旧CLI缓存已归档为 target/onboarding-before.Vgoy97/superseded-cli-cache.tar.gz（约21MiB），可恢复；本次自有临时目录已清理，未删除业务数据。
