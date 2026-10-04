@@ -7,7 +7,7 @@
 3. 发行包携带 skill，机器安装与同步更新集成。
 4. 定向测试、真实模板 CLI 验证、失败保护和独立 skill 校验。
 
-当前已确认：机器 update 存在，仅消费本地 downloads/latest；尚无 new 和发布 skill。当前磁盘约 213 MiB 可用，禁止并行 Cargo 或无关构建。
+实施前现状：机器 update 仅消费本地 downloads/latest，当时尚无 new 和发布 skill；磁盘约213MiB可用，因此本次Cargo验证串行执行。
 
 ## 已完成
 
