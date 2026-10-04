@@ -234,7 +234,15 @@ The third command requires root and namespace permission for a test-owned mount 
 
 The harness rejects a dynamically linked init. Inside the already pivoted namespace, it replaces bwrap's proc submounts with a complete private proc mount so the nested Worker can mount its own proc. It keeps the outer root fixture's existing capabilities; the product's inner namespace, capability removal and guard remain unchanged. It never binds the host proc into the final root. This private compiler test complements the managed daemon test; it does not install a machine service.
 
-The complete first-install acceptance additionally requires the built `dever` and `deverd` binaries:
+To accept an already prepared official release (including its real signing identity), use the owned-image verifier. `--assets` feeds the exact three download files through the real installer using local transport; signature checks, extraction and bootstrap execution are unchanged. It requires the explicit static bwrap/init fixtures described above, creates a new image, starts only its own daemon and records each passed stage. Online `dever update` and real-host service activation remain separate checks.
+
+```sh
+python3 -B test/onboarding/verify_prepared_release.py \
+  --release /prepared/release --assets /prepared/download-assets \
+  --image /new/owned-image --report /owned-records/acceptance.json
+```
+
+The existing fixture-based bootstrap regression additionally requires the built `dever` and `deverd` binaries:
 
 ```sh
 cargo test --offline --locked -p dever-cli --test native_release \
