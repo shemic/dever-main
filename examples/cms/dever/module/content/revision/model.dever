@@ -1,0 +1,16 @@
+type RevisionStatus {
+  Draft = "草稿"
+  Published = "已发布"
+}
+
+type Revision {
+  article_id: news.article.model.id index
+  version: Int
+  title: Text(1, 160)
+  body: Text
+  category_id: content.category.model.id?
+  asset_id: media.asset.model.id?
+  status: RevisionStatus default RevisionStatus.Draft index
+}
+
+unique(article_id, version)

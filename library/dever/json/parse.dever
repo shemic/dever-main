@@ -1,0 +1,388 @@
+type Expect {
+  RootValue
+  RootDone
+  ArrayFirst
+  ArrayValue
+  ArrayNext
+  ObjectFirst
+  ObjectKey
+  ObjectColon
+  ObjectValue
+  ObjectNext
+}
+
+type Frame {
+  expect: Expect
+  children: List<Int>
+  members: Map<Text, Int>
+  key: Text
+}
+
+type State {
+  stack: Map<Int, Frame>
+  depth: Int
+  nodes: Map<Int, dever.json.value.Value>
+  next_id: Int
+  root: Int?
+  failure: Text
+  position: Int
+}
+
+public parse(source: Text) (document: dever.json.value.Document) {
+  document = scanned(result(dever.json.scan.scan(source)), length(source))
+}
+
+scanned(result: dever.json.scan.Result.Scanned(tokens), end: Int) (
+  document: dever.json.value.Document
+) recover("scanner failures become public JSON parse failures") {
+  state = reduce_until(
+    token,
+    tokens,
+    State {
+      stack = {
+        0 = frame(Expect.RootValue)
+      }
+      depth = 0
+      nodes = {}
+      next_id = 0
+      root = null
+      failure = ""
+      position = 0
+    }
+  )
+  document = finish(state.failure == "", state, end)
+}
+
+scanned(result: dever.json.scan.Result.Failed(position, message), end: Int) (
+  document: dever.json.value.Document
+) recover("scanner failures become public JSON parse failures") {
+  fail(dever.json.value.ParseResult.Failed(position, message))
+}
+
+frame(expect: Expect) (result: Frame) {
+  result = Frame {
+    expect = expect
+    children = []
+    members = {}
+    key = ""
+  }
+}
+
+finish(valid: false, state: State, end: Int) (document: dever.json.value.Document) {
+  fail(dever.json.value.ParseResult.Failed(state.position, state.failure))
+}
+
+finish(valid: true, state: State, end: Int) (document: dever.json.value.Document) {
+  document = balanced(state.depth == 0, state, end)
+}
+
+balanced(complete: false, state: State, end: Int) (document: dever.json.value.Document) {
+  fail(dever.json.value.ParseResult.Failed(end, "unterminated JSON container"))
+}
+
+balanced(complete: true, state: State, end: Int) (document: dever.json.value.Document) {
+  document = root(state.root, state.nodes, end)
+}
+
+root(id: null, nodes: Map<Int, dever.json.value.Value>, end: Int) (
+  document: dever.json.value.Document
+) {
+  fail(dever.json.value.ParseResult.Failed(end, "expected a JSON value"))
+}
+
+root(id: Int, nodes: Map<Int, dever.json.value.Value>, end: Int) (
+  document: dever.json.value.Document
+) {
+  document = dever.json.value.Document {
+    root = id
+    nodes = nodes
+  }
+}
+
+token(token: dever.json.scan.Token, state: State) (next: State, stop: Bool) {
+  positioned = state
+  positioned.position = token.position
+  next = current(get(state.stack, state.depth), token.kind, positioned)
+  stop = next.failure != ""
+}
+
+current(frame: null, kind: dever.json.scan.Kind, state: State) (next: State) {
+  next = invalid_state("invalid JSON parser stack", state)
+}
+
+current(frame: Frame, kind: dever.json.scan.Kind, state: State) (next: State) {
+  next = expected(frame.expect, kind, frame, state)
+}
+
+expected(
+  expect: Expect.RootValue,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = value(kind, state)
+}
+
+expected(
+  expect: Expect.RootDone,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = invalid_state("unexpected content after the JSON value", state)
+}
+
+expected(
+  expect: Expect.ArrayFirst,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = array_first(kind, frame, state)
+}
+
+expected(
+  expect: Expect.ArrayValue,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = value(kind, state)
+}
+
+expected(
+  expect: Expect.ArrayNext,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = array_next(kind, frame, state)
+}
+
+expected(
+  expect: Expect.ObjectFirst,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = object_first(kind, frame, state)
+}
+
+expected(
+  expect: Expect.ObjectKey,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = object_key(kind, frame, state)
+}
+
+expected(
+  expect: Expect.ObjectColon,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = object_colon(kind, frame, state)
+}
+
+expected(
+  expect: Expect.ObjectValue,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = value(kind, state)
+}
+
+expected(
+  expect: Expect.ObjectNext,
+  kind: dever.json.scan.Kind,
+  frame: Frame,
+  state: State
+) (next: State) {
+  next = object_next(kind, frame, state)
+}
+
+value(kind: dever.json.scan.Kind.Scalar(value), state: State) (next: State) {
+  next = commit(value, state)
+}
+
+value(kind: dever.json.scan.Kind.ArrayOpen, state: State) (next: State) {
+  next = open(state.depth < dever.json.value.maximum_depth(), Expect.ArrayFirst, state)
+}
+
+value(kind: dever.json.scan.Kind.ObjectOpen, state: State) (next: State) {
+  next = open(state.depth < dever.json.value.maximum_depth(), Expect.ObjectFirst, state)
+}
+
+value(kind: other, state: State) (next: State) {
+  next = invalid_state("expected a JSON value", state)
+}
+
+open(allowed: false, expect: Expect, state: State) (next: State) {
+  next = invalid_state("JSON nesting exceeds 256 containers", state)
+}
+
+open(allowed: true, expect: Expect, state: State) (next: State) {
+  next = state
+  next.depth = state.depth + 1
+  next.stack = put(state.stack, next.depth, frame(expect))
+}
+
+array_first(kind: dever.json.scan.Kind.ArrayClose, frame: Frame, state: State) (
+  next: State
+) {
+  next = close(dever.json.value.Value.Array(frame.children), state)
+}
+
+array_first(kind: other, frame: Frame, state: State) (next: State) {
+  next = value(kind, state)
+}
+
+array_next(kind: dever.json.scan.Kind.ArrayClose, frame: Frame, state: State) (
+  next: State
+) {
+  next = close(dever.json.value.Value.Array(frame.children), state)
+}
+
+array_next(kind: dever.json.scan.Kind.Comma, frame: Frame, state: State) (next: State) {
+  next = expecting(Expect.ArrayValue, frame, state)
+}
+
+array_next(kind: other, frame: Frame, state: State) (next: State) {
+  next = invalid_state("expected ',' or ']' after an array element", state)
+}
+
+object_first(kind: dever.json.scan.Kind.ObjectClose, frame: Frame, state: State) (
+  next: State
+) {
+  next = close(dever.json.value.Value.Object(frame.members), state)
+}
+
+object_first(kind: other, frame: Frame, state: State) (next: State) {
+  next = object_key(kind, frame, state)
+}
+
+object_key(kind: dever.json.scan.Kind.Scalar(value), frame: Frame, state: State) (
+  next: State
+) {
+  next = key_value(value, frame, state)
+}
+
+object_key(kind: other, frame: Frame, state: State) (next: State) {
+  next = invalid_state("expected a quoted JSON object name", state)
+}
+
+key_value(value: dever.json.value.Value.String(key), frame: Frame, state: State) (
+  next: State
+) {
+  next = unique_key(get(frame.members, key) == null, key, frame, state)
+}
+
+key_value(value: other, frame: Frame, state: State) (next: State) {
+  next = invalid_state("expected a quoted JSON object name", state)
+}
+
+unique_key(unique: false, key: Text, frame: Frame, state: State) (next: State) {
+  next = invalid_state("duplicate JSON object name: " + key, state)
+}
+
+unique_key(unique: true, key: Text, frame: Frame, state: State) (next: State) {
+  keyed = frame
+  keyed.key = key
+  next = expecting(Expect.ObjectColon, keyed, state)
+}
+
+object_colon(kind: dever.json.scan.Kind.Colon, frame: Frame, state: State) (next: State) {
+  next = expecting(Expect.ObjectValue, frame, state)
+}
+
+object_colon(kind: other, frame: Frame, state: State) (next: State) {
+  next = invalid_state("expected ':' after a JSON object name", state)
+}
+
+object_next(kind: dever.json.scan.Kind.ObjectClose, frame: Frame, state: State) (
+  next: State
+) {
+  next = close(dever.json.value.Value.Object(frame.members), state)
+}
+
+object_next(kind: dever.json.scan.Kind.Comma, frame: Frame, state: State) (next: State) {
+  next = expecting(Expect.ObjectKey, frame, state)
+}
+
+object_next(kind: other, frame: Frame, state: State) (next: State) {
+  next = invalid_state("expected ',' or '}' after an object member", state)
+}
+
+expecting(expect: Expect, frame: Frame, state: State) (next: State) {
+  updated = frame
+  updated.expect = expect
+  next = state
+  next.stack = put(state.stack, state.depth, updated)
+}
+
+close(value: dever.json.value.Value, state: State) (next: State) {
+  parent = state
+  parent.stack = remove(state.stack, state.depth)
+  parent.depth = state.depth - 1
+  next = commit(value, parent)
+}
+
+commit(value: dever.json.value.Value, state: State) (next: State) {
+  inserted = state
+  inserted.nodes = put(state.nodes, state.next_id, value)
+  inserted.next_id = state.next_id + 1
+  next = attach(get(state.stack, state.depth), state.next_id, inserted)
+}
+
+attach(frame: null, id: Int, state: State) (next: State) {
+  next = invalid_state("invalid JSON parser parent", state)
+}
+
+attach(frame: Frame, id: Int, state: State) (next: State) {
+  next = attach_expected(frame.expect, frame, id, state)
+}
+
+attach_expected(expect: Expect.RootValue, frame: Frame, id: Int, state: State) (
+  next: State
+) {
+  next = expecting(Expect.RootDone, frame, state)
+  next.root = id
+}
+
+attach_expected(expect: Expect.ArrayFirst, frame: Frame, id: Int, state: State) (
+  next: State
+) {
+  next = append_child(frame, id, state)
+}
+
+attach_expected(expect: Expect.ArrayValue, frame: Frame, id: Int, state: State) (
+  next: State
+) {
+  next = append_child(frame, id, state)
+}
+
+attach_expected(expect: Expect.ObjectValue, frame: Frame, id: Int, state: State) (
+  next: State
+) {
+  updated = frame
+  updated.members = put(frame.members, frame.key, id)
+  next = expecting(Expect.ObjectNext, updated, state)
+}
+
+attach_expected(expect: other, frame: Frame, id: Int, state: State) (next: State) {
+  next = invalid_state("unexpected JSON value", state)
+}
+
+append_child(frame: Frame, id: Int, state: State) (next: State) {
+  updated = frame
+  updated.children = append(frame.children, id)
+  next = expecting(Expect.ArrayNext, updated, state)
+}
+
+invalid_state(message: Text, state: State) (next: State) {
+  next = state
+  next.failure = message
+}

@@ -1,0 +1,62 @@
+public type TokenResult {
+  Ready(value: Secret)
+  error Failed(message: Text)
+}
+
+public type HashResult {
+  Ready(value: Text)
+  error Failed(message: Text)
+}
+
+public type VerifyResult {
+  Ready(value: Bool)
+  error Failed(message: Text)
+}
+
+public token(bytes: Int) (value: Secret) {
+  value = token_value(dever.system.crypto_token(bytes))
+}
+
+token_value(result: TokenResult.Ready(value)) (secret: Secret) {
+  secret = value
+}
+
+token_value(result: TokenResult.Failed(message)) (secret: Secret) {
+  fail(TokenResult.Failed(message))
+}
+
+public password_hash(password: Secret) (value: Text) {
+  value = hash_value(dever.system.crypto_password_hash(password))
+}
+
+hash_value(result: HashResult.Ready(value)) (hash: Text) {
+  hash = value
+}
+
+hash_value(result: HashResult.Failed(message)) (hash: Text) {
+  fail(HashResult.Failed(message))
+}
+
+public password_verify(password: Secret, hash: Text) (value: Bool) {
+  value = verify_value(dever.system.crypto_password_verify(password, hash))
+}
+
+verify_value(result: VerifyResult.Ready(value)) (valid: Bool) {
+  valid = value
+}
+
+verify_value(result: VerifyResult.Failed(message)) (valid: Bool) {
+  fail(VerifyResult.Failed(message))
+}
+
+public sha256(bytes: Bytes) (value: Bytes) pure {
+  value = dever.system.crypto_sha256(bytes)
+}
+
+public hmac_sha256(key: Secret, bytes: Bytes) (value: Bytes) pure {
+  value = dever.system.crypto_hmac_sha256(key, bytes)
+}
+
+public constant_time_eq(left: Bytes, right: Bytes) (equal: Bool) pure {
+  equal = dever.system.crypto_constant_time_eq(left, right)
+}

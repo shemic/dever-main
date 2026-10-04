@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"actual run/build、filesystem integrity 和 isolated executable tests"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"resource/Worker startup failure 必须保持 runtime fault"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"build/runtime ownership 和 root test 位置"}
+{"file":".trellis/tasks/09-29-external-lib-packaging/prd.md","reason":"打包子任务验收标准"}

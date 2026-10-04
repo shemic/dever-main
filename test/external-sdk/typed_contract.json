@@ -1,0 +1,19 @@
+{
+  "port": "example.Typed",
+  "adapter": "example.Managed",
+  "ecosystem": "exec",
+  "entry": "test/typed",
+  "schema": "typed-fixture-v1",
+  "libs": [],
+  "capabilities": [],
+  "operations": ["render"],
+  "setting": {"type": "record", "fields": {"prefix": {"type": "text"}}},
+  "inputs": {"render": {"type": "record", "fields": {
+    "message": {"type": "record", "fields": {
+      "name": {"type": "text"}, "number": {"type": "int64"},
+      "labels": {"type": "list", "value": {"type": "text"}}
+    }}
+  }}},
+  "outputs": {"render": {"type": "record", "fields": {"text": {"type": "text"}}}},
+  "errors": {"example.Rejected": {"type": "record", "fields": {"reason": {"type": "text"}}}}
+}

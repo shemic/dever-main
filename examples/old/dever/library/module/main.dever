@@ -1,0 +1,11 @@
+
+main() (json: Text) {
+  total = reduce(add, [1, 2, 3], 0)
+  json = dever.json.stringify(
+    dever.json.parse("{\"message\":\"你好 Dever\",\"total\":" + int.to_text(total) + "}")
+  )
+}
+
+add(value: Int, total: Int) (next: Int) {
+  next = total + value
+}

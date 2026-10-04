@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"核对允许的离线定向检查和测试入口兼容性"}
+{"file":".trellis/tasks/09-29-build-cache-storage/research/cache-boundaries.md","reason":"复核 clean 与机器级 cache clean 的安全边界"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"复核失败清理、符号链接拒绝和原始错误保留"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"复核 owner 唯一性并避免平行缓存实现"}

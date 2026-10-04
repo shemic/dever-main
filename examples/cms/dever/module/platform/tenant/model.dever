@@ -1,0 +1,11 @@
+type TenantStatus {
+  Active = "启用"
+  Disabled = "禁用"
+}
+
+global type Tenant {
+  uuid: Uuid generated unique
+  key: Text(1, 64) unique
+  name: Text(1, 100)
+  status: TenantStatus default TenantStatus.Active index
+}

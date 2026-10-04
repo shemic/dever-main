@@ -1,0 +1,49 @@
+normalize_slug(value: Text) (slug: Text) pure {
+  slug = text.lower(text.trim(value))
+}
+
+normalize_title(value: Text) (title: Text) pure {
+  title = text.trim(value)
+}
+
+page_size(value: Int >= 1 and <= 100) (size: Int) pure {
+  size = value
+}
+
+page_size(value: other) (size: Int) pure {
+  fail(dever.api.Error.Invalid)
+}
+
+require_draft(draft: true) () pure {}
+
+require_draft(draft: false) () pure {
+  fail(dever.api.Error.Conflict)
+}
+
+require_owner(owned: true) () pure {}
+
+require_owner(owned: false) () pure {
+  fail(dever.api.Error.Forbidden)
+}
+
+require_published(published: true) () pure {}
+
+require_published(published: false) () pure {
+  fail(dever.api.Error.NotFound)
+}
+
+require_updated(changed: 1) () pure {}
+
+require_updated(changed: other) () pure {
+  fail(dever.api.Error.Conflict)
+}
+
+require_content(slug: Text, title: Text, body: Text) () pure {
+  require_valid(slug != "" and title != "" and text.trim(body) != "")
+}
+
+require_valid(valid: true) () pure {}
+
+require_valid(valid: false) () pure {
+  fail(dever.api.Error.Invalid)
+}

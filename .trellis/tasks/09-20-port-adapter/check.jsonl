@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Focused architecture/effect/config tests"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Single symbol/dispatch owner and legal role layout"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Port failure subset and diagnostics"}

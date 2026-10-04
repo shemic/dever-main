@@ -1,0 +1,11 @@
+public from_int(value: Int) (result: Float) {
+  result = dever.system.float_from_int(value)
+}
+
+public parse(value: Text) (result: Float?) {
+  result = dever.system.float_parse(value)
+}
+
+public to_text(value: Float) (result: Text) {
+  result = dever.system.float_to_text(value)
+}

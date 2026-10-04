@@ -1,0 +1,27 @@
+fixture_member(
+  selected_tenant_id: platform.tenant.model.id,
+  email: Text,
+  display_name: Text,
+  password: Secret
+) (result: BootstrapView) {
+  input = domain.prepare(email, display_name)
+  hash = blocking(dever.crypto.password_hash(password))
+  principal = model.principal.create(
+    {
+      display_name = input.name
+    }
+  )
+  stored = model.create(
+    {
+      principal_id = principal.id
+      email = input.address
+      password_hash = hash
+    }
+  )
+  user.membership.fixture_join(principal.id, selected_tenant_id)
+  result = BootstrapView {
+    tenant_id = selected_tenant_id
+    user_id = principal.id
+    credential_id = stored.id
+  }
+}

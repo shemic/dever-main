@@ -1,0 +1,15 @@
+public round(value: Decimal, places: Int) (result: Decimal) {
+  result = dever.system.decimal_round(value, places)
+}
+
+public parse(value: Text) (result: Decimal?) {
+  result = dever.system.decimal_parse(value)
+}
+
+public to_text(value: Decimal) (result: Text) {
+  result = dever.system.decimal_to_text(value)
+}
+
+public from_int(value: Int) (result: Decimal) {
+  result = dever.system.decimal_from_int(value)
+}

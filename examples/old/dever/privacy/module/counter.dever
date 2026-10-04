@@ -1,0 +1,20 @@
+# private 隐藏表示，调用方通过操作使用 Counter；普通数据无需强行套这层封装。
+
+public type Counter {
+  private value: Int
+}
+
+public start() (counter: Counter) pure {
+  counter = Counter {
+    value = 0
+  }
+}
+
+public increment(counter: Counter) (next: Counter) pure {
+  next = counter
+  next.value = counter.value + 1
+}
+
+public read(counter: Counter) (value: Int) pure {
+  value = counter.value
+}

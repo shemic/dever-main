@@ -1,0 +1,19 @@
+
+route(request: dever.http.Request) (response: dever.http.Response) {
+  response = dever.http.Response {
+    status = 200
+    headers = [dever.http.header("Content-Type", "text/plain; charset=utf-8")]
+    body = dever.bytes.from_text("Hello Dever: " + request.target)
+  }
+}
+
+serve() () {
+  listener = dever.net.listen("127.0.0.1", 0)
+  port = dever.net.port(listener)
+  blocking(dever.io.println("HTTP listening on 127.0.0.1:" + int.to_text(port)))
+  dever.http.serve(route, listener, dever.http.default_limits())
+}
+
+main() () {
+  serve()
+}

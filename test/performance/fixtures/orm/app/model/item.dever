@@ -1,0 +1,13 @@
+type DelayResult {
+  total: Int
+}
+
+global type Item {
+  value: Int index
+  label: Text(1, 32)
+}
+
+sql delay(work: Int) (result: DelayResult) {
+  sqlite = "WITH RECURSIVE counter(value) AS (SELECT 1 UNION ALL SELECT value + 1 FROM counter WHERE value < ?1) SELECT SUM(value) AS total FROM counter"
+  postgres = "SELECT SUM(value)::bigint AS total FROM generate_series(1::bigint, $1::bigint) AS value"
+}

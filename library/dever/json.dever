@@ -1,0 +1,76 @@
+# JSON values and capture result choices live in dever.json.value.
+public parse(source: Text) (document: dever.json.value.Document) {
+  document = dever.json.parse.parse(source)
+}
+
+public stringify(document: dever.json.value.Document) (text: Text) {
+  text = dever.json.write.stringify(document)
+}
+
+public node(document: dever.json.value.Document, id: Int) (result: dever.json.value.Value?) {
+  result = get(document.nodes, id)
+}
+
+public property(document: dever.json.value.Document, id: Int, name: Text) (result: Int?) {
+  result = object_property(node(document, id), name)
+}
+
+object_property(value: dever.json.value.Value.Object(members), name: Text) (
+  result: Int?
+) {
+  result = get(members, name)
+}
+
+object_property(value: null, name: Text) (result: Int?) {
+  result = null
+}
+
+object_property(value: other, name: Text) (result: Int?) {
+  result = null
+}
+
+type ElementState {
+  target: Int
+  index: Int
+  found: Int?
+}
+
+public element(document: dever.json.value.Document, id: Int, index: Int) (result: Int?) {
+  result = array_element(node(document, id), index)
+}
+
+array_element(value: dever.json.value.Value.Array(children), index: Int) (result: Int?) {
+  state = reduce_until(
+    element_at,
+    children,
+    ElementState {
+      target = index
+      index = 0
+      found = null
+    }
+  )
+  result = state.found
+}
+
+array_element(value: null, index: Int) (result: Int?) {
+  result = null
+}
+
+array_element(value: other, index: Int) (result: Int?) {
+  result = null
+}
+
+element_at(id: Int, state: ElementState) (next: ElementState, stop: Bool) {
+  next = selected(state.index == state.target, id, state)
+  next.index = state.index + 1
+  stop = state.index >= state.target
+}
+
+selected(matches: true, id: Int, state: ElementState) (next: ElementState) {
+  next = state
+  next.found = id
+}
+
+selected(matches: false, id: Int, state: ElementState) (next: ElementState) {
+  next = state
+}

@@ -1,0 +1,28 @@
+{
+  "id": "private-compiler-distribution",
+  "name": "private-compiler-distribution",
+  "title": "Dever 私有编译器与公开发行边界",
+  "description": "隐藏 Rust 引导实现并建立不依赖 Rust 工具链的公开发行路径",
+  "status": "planning",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P2",
+  "creator": "Antigravity",
+  "assignee": "Antigravity",
+  "createdAt": "2026-09-06",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-28-shared-toolchain"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {}
+}

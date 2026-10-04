@@ -1,0 +1,28 @@
+[package]
+name = "dever-sandbox"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+sha2.workspace = true
+goblin = { version = "=0.10.7", default-features = false, features = ["elf32", "elf64", "endian_fd", "std"] }
+
+[target.'cfg(target_os = "linux")'.dependencies]
+seccompiler = { version = "=0.5.0", default-features = false }
+libc = "=0.2.189"
+command-fds = "=0.3.3"
+nix = { version = "=0.31.3", default-features = false }
+rustix = { version = "=1.1.2", features = ["fs", "process"] }
+
+[[bin]]
+name = "dever-sandbox-guard"
+path = "src/main.rs"
+
+[[test]]
+name = "isolation"
+path = "../../test/dever-sandbox-tests/isolation.rs"

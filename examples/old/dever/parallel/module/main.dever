@@ -1,0 +1,10 @@
+# 最多两个工作线程；输出顺序不保证，parallel_each 返回时任务都已完成。
+
+show(name: Text) () {
+  dever.io.println(name)
+}
+
+main() () {
+  parallel_each(show, ["alpha", "beta", "gamma"], 2)
+  dever.io.println("done")
+}

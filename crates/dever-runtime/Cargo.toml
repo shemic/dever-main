@@ -1,0 +1,49 @@
+[package]
+name = "dever-runtime"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[features]
+default = []
+auth-crypto = ["dep:sha2", "dep:hmac", "dep:subtle"]
+crypto = ["auth-crypto", "dep:argon2", "dep:getrandom"]
+wire = ["dep:serde", "dep:serde_json", "serde_json/raw_value", "dep:base64", "dep:getrandom"]
+external = ["wire", "dep:sha2", "dep:dever-sandbox"]
+api = ["wire", "auth-crypto"]
+database = ["wire", "dep:getrandom"]
+sqlite = ["database", "dep:deadpool-sqlite"]
+postgres = ["database", "dep:deadpool-postgres", "dep:tokio-postgres", "dep:tokio-postgres-rustls"]
+
+[dependencies]
+dever-sandbox = { path = "../dever-sandbox", optional = true }
+dec.workspace = true
+indexmap.workspace = true
+tokio.workspace = true
+futures-util.workspace = true
+bytes.workspace = true
+base64 = { workspace = true, optional = true }
+hyper.workspace = true
+hyper-util.workspace = true
+http-body-util.workspace = true
+tokio-tungstenite.workspace = true
+tokio-rustls.workspace = true
+rustls.workspace = true
+webpki-roots.workspace = true
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+deadpool-sqlite = { workspace = true, optional = true }
+deadpool-postgres = { workspace = true, optional = true }
+tokio-postgres = { workspace = true, optional = true }
+tokio-postgres-rustls = { workspace = true, optional = true }
+getrandom = { workspace = true, optional = true }
+argon2 = { workspace = true, optional = true }
+sha2 = { workspace = true, optional = true }
+hmac = { workspace = true, optional = true }
+subtle = { workspace = true, optional = true }
+zeroize.workspace = true
+chrono.workspace = true

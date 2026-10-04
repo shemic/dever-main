@@ -1,0 +1,7 @@
+public parse(value: Text) (result: Int?) {
+  result = dever.system.int_parse(value)
+}
+
+public to_text(value: Int) (result: Text) {
+  result = dever.system.int_to_text(value)
+}

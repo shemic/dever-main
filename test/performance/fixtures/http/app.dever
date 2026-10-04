@@ -1,0 +1,35 @@
+type WorkerFailure {
+  error Failed(message: Text)
+}
+
+http() (result: Bool) {
+  port.plain(config.limits(), config.large_body(), config.lifetime())
+  result = true
+}
+
+https() (result: Bool) {
+  port.secure(
+    config.limits(),
+    config.large_body(),
+    config.lifetime(),
+    config.certificate(),
+    config.key()
+  )
+  result = true
+}
+
+http2() (result: Bool) {
+  port.plain(config.http2_limits(), config.large_body(), config.lifetime())
+  result = true
+}
+
+https2() (result: Bool) {
+  port.secure(
+    config.http2_limits(),
+    config.large_body(),
+    config.lifetime(),
+    config.certificate(),
+    config.key()
+  )
+  result = true
+}

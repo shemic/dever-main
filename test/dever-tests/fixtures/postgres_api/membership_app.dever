@@ -1,0 +1,13 @@
+fixture_join(
+  account_id: user.account.model.principal.id,
+  selected_tenant_id: platform.tenant.model.id
+) () {
+  stored = model.create(
+    {
+      user_id = account_id
+      tenant_id = selected_tenant_id
+      role = model.MembershipRole.Reader
+    }
+  )
+  discarded = stored
+}

@@ -1,0 +1,7 @@
+public parse(value: Text) (result: Uuid?) {
+  result = dever.system.uuid_parse(value)
+}
+
+public to_text(value: Uuid) (result: Text) {
+  result = dever.system.uuid_to_text(value)
+}

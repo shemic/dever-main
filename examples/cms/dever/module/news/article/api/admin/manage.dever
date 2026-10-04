@@ -1,0 +1,9 @@
+get list = app.list
+
+get detail = app.detail
+
+post create = app.create
+
+delete remove = app.remove
+
+post publish = app.publish

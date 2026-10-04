@@ -1,0 +1,5 @@
+# 预期 C006：另一个 package 不能读取私有字段。
+
+public read(box: secret.Box) (value: Int) {
+  value = box.value
+}

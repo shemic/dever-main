@@ -1,0 +1,149 @@
+type Phase {
+  Start
+  Sign
+  Zero
+  Integer
+  Point
+  Fraction
+  Exponent
+  ExponentSign
+  ExponentDigits
+  Invalid
+}
+
+public valid(raw: Text) (result: Bool) {
+  phase = reduce(advance, text.split(raw, ""), Phase.Start)
+  result = complete(phase)
+}
+
+advance(character: Text, phase: Phase.Start) (result: Phase) {
+  result = start(character)
+}
+
+advance(character: Text, phase: Phase.Sign) (result: Phase) {
+  result = integer_start(character)
+}
+
+advance(character: Text, phase: Phase.Zero) (result: Phase) {
+  result = after_integer(character)
+}
+
+advance(character: Text, phase: Phase.Integer) (result: Phase) {
+  result = integer_digit(text.contains("0123456789", character), character)
+}
+
+advance(character: Text, phase: Phase.Point) (result: Phase) {
+  result = digit(text.contains("0123456789", character), Phase.Fraction)
+}
+
+advance(character: Text, phase: Phase.Fraction) (result: Phase) {
+  result = fraction_digit(text.contains("0123456789", character), character)
+}
+
+advance(character: Text, phase: Phase.Exponent) (result: Phase) {
+  result = exponent_start(character)
+}
+
+advance(character: Text, phase: Phase.ExponentSign) (result: Phase) {
+  result = digit(text.contains("0123456789", character), Phase.ExponentDigits)
+}
+
+advance(character: Text, phase: Phase.ExponentDigits) (result: Phase) {
+  result = digit(text.contains("0123456789", character), Phase.ExponentDigits)
+}
+
+advance(character: Text, phase: Phase.Invalid) (result: Phase) {
+  result = Phase.Invalid
+}
+
+start(character: "-") (result: Phase) {
+  result = Phase.Sign
+}
+
+start(character: other) (result: Phase) {
+  result = integer_start(character)
+}
+
+integer_start(character: "0") (result: Phase) {
+  result = Phase.Zero
+}
+
+integer_start(character: other) (result: Phase) {
+  result = digit(text.contains("123456789", character), Phase.Integer)
+}
+
+digit(valid: true, phase: Phase) (result: Phase) {
+  result = phase
+}
+
+digit(valid: false, phase: Phase) (result: Phase) {
+  result = Phase.Invalid
+}
+
+integer_digit(valid: true, character: Text) (result: Phase) {
+  result = Phase.Integer
+}
+
+integer_digit(valid: false, character: Text) (result: Phase) {
+  result = after_integer(character)
+}
+
+after_integer(character: ".") (result: Phase) {
+  result = Phase.Point
+}
+
+after_integer(character: other) (result: Phase) {
+  result = exponent(character)
+}
+
+fraction_digit(valid: true, character: Text) (result: Phase) {
+  result = Phase.Fraction
+}
+
+fraction_digit(valid: false, character: Text) (result: Phase) {
+  result = exponent(character)
+}
+
+exponent(character: "e") (result: Phase) {
+  result = Phase.Exponent
+}
+
+exponent(character: "E") (result: Phase) {
+  result = Phase.Exponent
+}
+
+exponent(character: other) (result: Phase) {
+  result = Phase.Invalid
+}
+
+exponent_start(character: "+") (result: Phase) {
+  result = Phase.ExponentSign
+}
+
+exponent_start(character: "-") (result: Phase) {
+  result = Phase.ExponentSign
+}
+
+exponent_start(character: other) (result: Phase) {
+  result = digit(text.contains("0123456789", character), Phase.ExponentDigits)
+}
+
+complete(phase: Phase.Zero) (result: Bool) {
+  result = true
+}
+
+complete(phase: Phase.Integer) (result: Bool) {
+  result = true
+}
+
+complete(phase: Phase.Fraction) (result: Bool) {
+  result = true
+}
+
+complete(phase: Phase.ExponentDigits) (result: Bool) {
+  result = true
+}
+
+complete(phase: other) (result: Bool) {
+  result = false
+}

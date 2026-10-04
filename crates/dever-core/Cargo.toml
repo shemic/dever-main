@@ -1,0 +1,18 @@
+[package]
+name = "dever-core"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+
+[lints]
+workspace = true
+
+[dependencies]
+dever-runtime = { workspace = true, features = ["database"] }
+pulldown-cmark.workspace = true
+sha2.workspace = true
+serde_json.workspace = true
+
+[features]
+reference = ["dever-runtime/crypto"]

@@ -1,0 +1,31 @@
+grant_owner(
+  account_id: user.account.model.principal.id,
+  selected_tenant_id: platform.tenant.model.id
+) () {
+  stored = model.create(
+    {
+      user_id = account_id
+      tenant_id = selected_tenant_id
+      role = model.MembershipRole.Owner
+    }
+  )
+  discarded = stored
+}
+
+require_active(
+  account_id: user.account.model.principal.id,
+  selected_tenant_id: platform.tenant.model.id
+) () {
+  stored = model.first(
+    {
+      where = user_id == account_id and tenant_id == selected_tenant_id and status == model.MembershipStatus.Active
+    }
+  )
+  active(stored)
+}
+
+active(stored: model.Membership) () {}
+
+active(stored: null) () {
+  fail(dever.api.Error.Unauthorized)
+}

@@ -1,0 +1,3 @@
+get list = app.published
+
+get detail = app.published_detail

@@ -1,0 +1,69 @@
+# 自包含后端示例：随机回环端口，只请求一次，然后排空并关闭。
+
+type Context {
+  prefix: Text
+  requests: Channel<Int>
+}
+
+route(request: dever.http.Request, context: Context) (
+  response: dever.http.Response
+) {
+  send(context.requests, 1)
+  response = dever.http.Response {
+    status = 200
+    headers = [dever.http.header("Content-Type", "text/plain; charset=utf-8")]
+    body = dever.bytes.from_text(context.prefix + request.target)
+  }
+}
+
+serve(listener: dever.system.Listener, context: Context) () {
+  dever.system.http_serve(route, listener, dever.http.default_limits(), context)
+}
+
+expired() () {
+  blocking(dever.io.println("服务排空超时，剩余任务已停止"))
+}
+
+count(value: Int) (text: Text) {
+  text = "requests = " + int.to_text(value)
+}
+
+count(value: null) (text: Text) {
+  text = "request channel ended"
+}
+
+main() () {
+  listener = dever.net.listen("127.0.0.1", 0)
+  port = dever.net.port(listener)
+  requests = channel(Int, 1)
+  server = run(
+    serve(
+      listener,
+      Context {
+        prefix = "Hello "
+        requests = requests
+      }
+    )
+  )
+  client = dever.http.client(
+    "http://127.0.0.1:" + int.to_text(port),
+    dever.tls.system(),
+    dever.http.default_limits(),
+    dever.http.default_pool_limits()
+  )
+  response = dever.http.request(
+    client,
+    dever.http.Request {
+      method = "GET"
+      target = "/Dever"
+      headers = []
+      body = dever.bytes.from_text("")
+    }
+  )
+  blocking(dever.io.println(dever.bytes.to_text(response.body)))
+  dever.net.close_listener(listener)
+  timeout(server, 2000, expired)
+  dever.http.close_client(client)
+  close(requests)
+  blocking(dever.io.println(count(receive(requests))))
+}

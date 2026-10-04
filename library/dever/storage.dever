@@ -1,0 +1,16 @@
+public type PutResult {
+  Stored(key: Uuid)
+  error Failed(message: Text)
+}
+
+public put(upload: Upload) (key: Uuid) {
+  key = stored(dever.system.upload_store(upload))
+}
+
+stored(result: PutResult.Stored(key)) (value: Uuid) {
+  value = key
+}
+
+stored(result: PutResult.Failed(message)) (value: Uuid) {
+  fail(PutResult.Failed(message))
+}

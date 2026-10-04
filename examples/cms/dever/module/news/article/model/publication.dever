@@ -1,0 +1,6 @@
+type Publication {
+  slug: Text(1, 180) unique
+  title: Text(1, 160)
+  body: Text
+  published_at: DateTime index
+}

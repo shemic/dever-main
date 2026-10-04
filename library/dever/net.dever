@@ -1,0 +1,134 @@
+public type ConnectResult {
+  Connected(socket: dever.system.Socket)
+  error Failed(message: Text)
+}
+
+public type ListenResult {
+  Listening(listener: dever.system.Listener)
+  error Failed(message: Text)
+}
+
+public type PortResult {
+  Bound(port: Int)
+  error Failed(message: Text)
+}
+
+public type ReadStreamResult {
+  Streaming(stream: AsyncStream<dever.io.ReadEvent>)
+  error Failed(message: Text)
+}
+
+type SystemReadResult {
+  Read(bytes: Bytes)
+  End
+  error Failed(message: Text)
+}
+
+public connect(host: Text, port: Int) (socket: dever.system.Socket) {
+  socket = connected(dever.system.tcp_connect(host, port))
+}
+
+# 有界连接使用数值 IP，避免把 DNS 解析误称为受此超时控制。
+public connect_timeout(address: Text, port: Int, milliseconds: Int) (socket: dever.system.Socket) {
+  socket = connected(dever.system.tcp_connect_timeout(address, port, milliseconds))
+}
+
+public accept(listener: dever.system.Listener) (socket: dever.system.Socket) {
+  socket = connected(dever.system.tcp_accept(listener))
+}
+
+connected(result: ConnectResult.Connected(socket)) (value: dever.system.Socket) {
+  value = socket
+}
+
+connected(result: ConnectResult.Failed(message)) (value: dever.system.Socket) {
+  fail(ConnectResult.Failed(message))
+}
+
+public listen(host: Text, port: Int) (listener: dever.system.Listener) {
+  listener = listening(dever.system.tcp_listen(host, port))
+}
+
+listening(result: ListenResult.Listening(listener)) (value: dever.system.Listener) {
+  value = listener
+}
+
+listening(result: ListenResult.Failed(message)) (value: dever.system.Listener) {
+  fail(ListenResult.Failed(message))
+}
+
+public port(listener: dever.system.Listener) (port: Int) {
+  port = bound(dever.system.tcp_port(listener))
+}
+
+bound(result: PortResult.Bound(port)) (value: Int) {
+  value = port
+}
+
+bound(result: PortResult.Failed(message)) (value: Int) {
+  fail(PortResult.Failed(message))
+}
+
+public read(socket: dever.system.Socket, limit: Int) (state: dever.io.ReadState) {
+  state = read_state(dever.system.tcp_read(socket, limit))
+}
+
+read_state(result: SystemReadResult.Read(bytes)) (state: dever.io.ReadState) {
+  state = dever.io.ReadState.Read(bytes)
+}
+
+read_state(result: SystemReadResult.End) (state: dever.io.ReadState) {
+  state = dever.io.ReadState.End
+}
+
+read_state(result: SystemReadResult.Failed(message)) (state: dever.io.ReadState) {
+  fail(dever.io.ReadResult.Failed(message))
+}
+
+public write(socket: dever.system.Socket, bytes: Bytes) () {
+  wrote(dever.system.tcp_write(socket, bytes))
+}
+
+public timeout(socket: dever.system.Socket, milliseconds: Int) () {
+  wrote(dever.system.tcp_timeout(socket, milliseconds))
+}
+
+wrote(result: dever.io.WriteResult.Done) () {}
+
+wrote(result: dever.io.WriteResult.Failed(message)) () {
+  fail(dever.io.WriteResult.Failed(message))
+}
+
+public close(socket: dever.system.Socket) () {
+  closed(dever.system.tcp_close(socket))
+}
+
+public close_listener(listener: dever.system.Listener) () {
+  closed(dever.system.tcp_close_listener(listener))
+}
+
+closed(result: dever.io.CloseResult.Closed) () {}
+
+closed(result: dever.io.CloseResult.Failed(message)) () {
+  fail(dever.io.CloseResult.Failed(message))
+}
+
+public chunks(socket: dever.system.Socket, limit: Int) (stream: AsyncStream<dever.io.ReadEvent>) {
+  stream = read_stream(dever.system.tcp_chunks(socket, limit))
+}
+
+read_stream(result: ReadStreamResult.Streaming(stream)) (
+  value: AsyncStream<dever.io.ReadEvent>
+) {
+  value = stream
+}
+
+read_stream(result: ReadStreamResult.Failed(message)) (
+  value: AsyncStream<dever.io.ReadEvent>
+) {
+  fail(ReadStreamResult.Failed(message))
+}
+
+public connections(listener: dever.system.Listener) (result: AsyncStream<ConnectResult>) {
+  result = dever.system.tcp_connections(listener)
+}

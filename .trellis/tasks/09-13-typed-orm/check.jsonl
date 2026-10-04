@@ -1,0 +1,7 @@
+{"file":".trellis/spec/backend/error-handling.md","reason":"数据库错误、事务失败、取消和资源回收必须显式传播"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查数据库测试边界、内存限制、无重复驱动逻辑和最小验证"}
+{"file":".trellis/tasks/09-13-typed-orm/research/architecture-options.md","reason":"复核实现只暴露 Model 包短函数，没有混入实例 method、链式查询器或动态 Value 路径"}
+{"file":".trellis/tasks/09-13-typed-orm/prd.md","reason":"逐项核对已确认的 Model、查询、配置、事务、错误、迁移和小内存验收合同"}
+{"file":".trellis/tasks/09-13-typed-orm/design.md","reason":"复核编译器/runtime/dialect 边界、driver profile、单连接事务与错误根边界没有重复实现"}
+{"file":".trellis/tasks/09-13-typed-orm/research/schema-change-matrix.md","reason":"确认所有自动 schema 变化均无静默数据损失，危险变化必须由命名 migrate 表达"}
+{"file":".trellis/tasks/09-13-typed-orm/research/driver-selection.md","reason":"确认 SQLite/PostgreSQL 只复用驱动和连接池，不引入第二套 ORM 或无界池"}

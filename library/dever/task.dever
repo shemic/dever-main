@@ -1,0 +1,14 @@
+# 第一个 tick 在一个周期后；落后的周期跳过，不积压待处理 tick。
+public ticks(millis: Int) (values: AsyncStream<Int>) {
+  values = dever.system.task_ticks(millis)
+}
+
+public sleep(millis: Int) () {
+  slept(dever.system.task_sleep(millis))
+}
+
+slept(result: dever.time.SleepResult.Done) () {}
+
+slept(result: dever.time.SleepResult.Failed(message)) () {
+  fail(dever.time.SleepResult.Failed(message))
+}

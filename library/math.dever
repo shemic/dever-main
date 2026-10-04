@@ -1,0 +1,31 @@
+public sqrt(value: Float) (result: Float) {
+  result = dever.system.float_sqrt(value)
+}
+
+public sin(value: Float) (result: Float) {
+  result = dever.system.float_sin(value)
+}
+
+public cos(value: Float) (result: Float) {
+  result = dever.system.float_cos(value)
+}
+
+public log(value: Float) (result: Float) {
+  result = dever.system.float_log(value)
+}
+
+public pow(value: Float, exponent: Float) (result: Float) {
+  result = dever.system.float_pow(value, exponent)
+}
+
+public is_nan(value: Float) (result: Bool) {
+  result = dever.system.float_is_nan(value)
+}
+
+public is_finite(value: Float) (result: Bool) {
+  result = dever.system.float_is_finite(value)
+}
+
+public is_infinite(value: Float) (result: Bool) {
+  result = dever.system.float_is_infinite(value)
+}

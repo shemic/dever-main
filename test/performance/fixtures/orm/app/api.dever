@@ -1,0 +1,9 @@
+public get count = app.count
+public post cancel = app.cancel
+cmd idle = app.orm_idle
+cmd crud = app.orm_crud
+cmd list = app.orm_list
+cmd cursor = app.orm_cursor
+cmd stream = app.orm_stream
+cmd pool = app.orm_pool
+cmd seed = app.orm_seed

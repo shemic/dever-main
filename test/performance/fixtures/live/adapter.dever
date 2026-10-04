@@ -1,0 +1,213 @@
+setting {
+  limits: dever.http.Limits
+  lifetime_ms: Int
+}
+
+type Service {
+  Tcp
+  Live
+}
+
+listening(result: dever.net.ListenResult.Listening(listener)) (
+  value: dever.system.Listener
+) {
+  value = listener
+}
+
+listening(result: dever.net.ListenResult.Failed(message)) (value: dever.system.Listener) {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+bound(result: dever.net.PortResult.Bound(port)) (value: Int) {
+  value = port
+}
+
+bound(result: dever.net.PortResult.Failed(message)) (value: Int) {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+written(result: dever.io.WriteResult.Done) () {}
+
+written(result: dever.io.WriteResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+closed(result: dever.io.CloseResult.Closed) () {}
+
+closed(result: dever.io.CloseResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+paused(result: dever.time.SleepResult.Done) () {}
+
+paused(result: dever.time.SleepResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+tcp_chunk(event: dever.io.ReadEvent.Chunk(bytes), socket: dever.system.Socket) () recover("TCP 连接错误由运行器检查") {
+  written(result(dever.net.write(socket, bytes)))
+}
+
+tcp_chunk(event: dever.io.ReadEvent.Failed(message), socket: dever.system.Socket) () recover("TCP 连接错误由运行器检查") {
+  blocking(dever.io.println("ERROR|" + message))
+}
+
+tcp_stream(
+  result: dever.net.ReadStreamResult.Streaming(stream),
+  socket: dever.system.Socket
+) () {
+  each(tcp_chunk, stream, socket)
+}
+
+tcp_stream(
+  result: dever.net.ReadStreamResult.Failed(message),
+  socket: dever.system.Socket
+) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+tcp_connection(
+  event: dever.net.ConnectResult.Connected(socket),
+  limits: dever.http.Limits
+) () recover("TCP 连接错误由运行器检查") {
+  written(result(dever.net.timeout(socket, limits.timeout_ms)))
+  tcp_stream(result(dever.net.chunks(socket, 4096)), socket)
+  closed(result(dever.net.close(socket)))
+}
+
+tcp_connection(
+  event: dever.net.ConnectResult.Failed(message),
+  limits: dever.http.Limits
+) () recover("TCP 连接错误由运行器检查") {
+  blocking(dever.io.println("ERROR|" + message))
+}
+
+tcp_server(listener: dever.system.Listener, limits: dever.http.Limits) () {
+  stream = dever.net.connections(listener)
+  parallel_each(tcp_connection, stream, limits.connections, limits)
+}
+
+websocket_message(
+  event: dever.websocket.MessageEvent.Read(message),
+  socket: dever.system.WebSocket
+) () recover("WebSocket 连接错误由运行器检查") {
+  websocket_echo(message, socket)
+}
+
+websocket_message(
+  event: dever.websocket.MessageEvent.Failed(message),
+  socket: dever.system.WebSocket
+) () recover("WebSocket 连接错误由运行器检查") {
+  blocking(dever.io.println("ERROR|" + message))
+}
+
+websocket_echo(
+  message: dever.websocket.Message.Text(value),
+  socket: dever.system.WebSocket
+) () recover("WebSocket 连接错误由运行器检查") {
+  written(result(dever.websocket.send(socket, dever.websocket.Message.Text(value))))
+}
+
+websocket_echo(
+  message: dever.websocket.Message.Binary(value),
+  socket: dever.system.WebSocket
+) () recover("WebSocket 连接错误由运行器检查") {
+  written(result(dever.websocket.send(socket, dever.websocket.Message.Binary(value))))
+}
+
+websocket_echo(message: other, socket: dever.system.WebSocket) () recover("WebSocket 连接错误由运行器检查") {}
+
+websocket_limits() (result: dever.websocket.Limits) {
+  result = dever.websocket.Limits {
+    message_bytes = 4096
+    idle_ms = setting.lifetime_ms
+    write_ms = setting.limits.timeout_ms
+  }
+}
+
+websocket_connection(result: dever.websocket.ConnectResult.Connected(socket)) () {
+  each(websocket_message, dever.websocket.messages(socket), socket)
+}
+
+websocket_connection(result: dever.websocket.ConnectResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+route(request: dever.http.Request, reply: dever.system.HttpReply) () {
+  live_path(request.target, reply)
+}
+
+live_path(target: "/ws", reply: dever.system.HttpReply) () recover("实时连接错误由运行器检查") {
+  websocket_connection(result(dever.websocket.accept(reply, websocket_limits())))
+}
+
+live_path(target: "/events", reply: dever.system.HttpReply) () recover("实时连接错误由运行器检查") {
+  written(result(dever.sse.start(reply, [])))
+  written(
+    result(
+      dever.sse.send(
+        reply,
+        dever.sse.Event {
+          event = "live"
+          data = "ready"
+          id = "1"
+          retry_ms = null
+        }
+      )
+    )
+  )
+  paused(result(dever.task.sleep(setting.lifetime_ms)))
+}
+
+live_path(target: other, reply: dever.system.HttpReply) () recover("实时连接错误由运行器检查") {
+  written(
+    result(
+      dever.http.respond(
+        reply,
+        dever.http.Response {
+          status = 404
+          headers = []
+          body = dever.bytes.from_text("unknown live benchmark path")
+        }
+      )
+    )
+  )
+}
+
+live_limits() (result: dever.http.LiveLimits) {
+  result = dever.http.LiveLimits {
+    chunk_bytes = 4096
+    idle_ms = setting.lifetime_ms
+    heartbeat_ms = 100
+  }
+}
+
+live_server(listener: dever.system.Listener) () {
+  dever.system.http_serve_live(route, listener, setting.limits, live_limits())
+}
+
+serve(service: Service.Tcp, listener: dever.system.Listener) () {
+  tcp_server(listener, setting.limits)
+}
+
+serve(service: Service.Live, listener: dever.system.Listener) () {
+  live_server(listener)
+}
+
+worker(service: Service) () {
+  listener = listening(result(dever.net.listen("127.0.0.1", 0)))
+  port = bound(result(dever.net.port(listener)))
+  server = run(serve(service, listener))
+  blocking(dever.io.println("READY|" + int.to_text(port)))
+  paused(result(dever.task.sleep(setting.lifetime_ms)))
+  stop(server)
+  closed(result(dever.net.close_listener(listener)))
+}
+
+port.tcp() () {
+  worker(Service.Tcp)
+}
+
+port.live() () {
+  worker(Service.Live)
+}

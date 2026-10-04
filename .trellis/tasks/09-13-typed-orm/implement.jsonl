@@ -1,0 +1,10 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"model、查询计划、资源和公开 API 必须在 checker/HIR/native 中保持静态合同"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"数据库公共包、驱动选择、runtime 构建与缓存必须复用现有工具链边界"}
+{"file":".trellis/tasks/09-13-typed-orm/research/architecture-options.md","reason":"依据现有无反射 AOT 和资源语义选择 ORM 表面"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"实现默认错误传播、事务回滚、根边界处理和 C012 合同"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"检查数据库测试边界、内存限制、无重复驱动逻辑和最小验证"}
+{"file":".trellis/tasks/09-13-typed-orm/research/implicit-suspension.md","reason":"统一删除 Dever async/await，并保留编译器推导协程、run/wait/stop 和同步入口裁剪合同"}
+{"file":".trellis/tasks/09-13-typed-orm/research/field-types.md","reason":"实现隐式字段、常用数据库类型、Uuid、choice、关联 ID、Seed 和索引语义"}
+{"file":".trellis/tasks/09-13-typed-orm/research/schema-change-matrix.md","reason":"按变更类别实现自动 diff、数据验证、from、命名 migrate 和两种方言的等价结果"}
+{"file":".trellis/tasks/09-13-typed-orm/research/query-api.md","reason":"实现已确认的 Model 短函数、块式查询、分页、关联、事务和连接解析表面"}
+{"file":".trellis/tasks/09-13-typed-orm/research/driver-selection.md","reason":"接入 rusqlite/deadpool-sqlite 与 tokio-postgres/deadpool-postgres，并按 runtime profile 裁剪驱动"}

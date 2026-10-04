@@ -1,0 +1,3 @@
+public greet() () {
+  dever.io.println("hello")
+}

@@ -1,0 +1,14 @@
+{"file":".trellis/tasks/09-29-language-production-closure/prd.md","reason":"总任务需求、范围和验收标准"}
+{"file":".trellis/tasks/09-19-application-testing/prd.md","reason":"现有应用Test入口、case-local fake及普通测试隔离合同"}
+{"file":".trellis/tasks/09-19-application-testing/design.md","reason":"复用test_program、每case执行/数据库与错误呈现，不新建测试解释器"}
+{"file":".trellis/tasks/09-20-production-api/prd.md","reason":"现有API/REST/可信身份/自动权限/database-only租户最新合同；旧权限设计不得复活"}
+{"file":".trellis/tasks/09-20-production-api/implement.md","reason":"原native实际语义、复用owner及已有验收证据"}
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"checked HIR、typed LLVM roots/failure/effect/Upload边界"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"独立runtime ABI profiles、私有ffi与资源所有权"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"共享SQL/driver、owned Session、事务及租户数据库隔离"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"复用单一logger及隐私/清理合同"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"compiler/runtime归属和根test约束"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"来源级拒绝、标准API错误映射和原始故障保留"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"最小定向/原caller等价验收，不把object当完整发行"}
+{"file": ".trellis/tasks/09-29-external-lib-protocol/prd.md", "reason": "沿用 external Adapter 协议、capability、超时取消与业务错误边界"}
+{"file": ".trellis/tasks/09-29-external-lib-packaging/prd.md", "reason": "沿用独立 Worker 资源校验和无宿主环境合同"}

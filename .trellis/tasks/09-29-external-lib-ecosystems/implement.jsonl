@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"CLI、cache、offline、runtime pack 和 config boundary"}
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Adapter schema identity 与业务边界"}
+{"file":".trellis/tasks/09-28-shared-toolchain/design.md","reason":"机器级共享 cache、版本和权限 owner"}
+{"file":".trellis/tasks/09-29-external-lib-protocol/design.md","reason":"SDK 必须实现的唯一协议"}

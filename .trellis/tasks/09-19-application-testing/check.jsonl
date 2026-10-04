@@ -1,0 +1,8 @@
+{"file": ".trellis/tasks/09-19-application-testing/prd.md", "reason": "逐项核对应用测试验收标准"}
+{"file": ".trellis/tasks/09-19-application-testing/design.md", "reason": "核对实现未偏离最终架构与隔离边界"}
+{"file": ".trellis/tasks/09-19-application-testing/implement.md", "reason": "核对分阶段交付与允许执行的验证"}
+{"file": ".trellis/spec/backend/compiler-contracts.md", "reason": "检查语言合同和生产编译路径无回归"}
+{"file": ".trellis/spec/backend/error-handling.md", "reason": "检查诊断与测试失败报告"}
+{"file": ".trellis/spec/backend/quality-guidelines.md", "reason": "检查重复、职责和定向覆盖"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "检查临时 SQLite 隔离且不触达正式数据库"}
+{"file": ".trellis/spec/guides/cross-layer-thinking-guide.md", "reason": "检查源码到 CLI/runtime 的跨层闭环"}

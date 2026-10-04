@@ -1,0 +1,107 @@
+
+route(request: dever.http.Request, reply: dever.system.HttpReply) () {
+  path(request.target, reply)
+}
+
+path(target: "/events", reply: dever.system.HttpReply) () {
+  dever.sse.start(reply, [])
+  tick(1, reply)
+  tick(2, reply)
+  tick(3, reply)
+}
+
+path(target: "/stream", reply: dever.system.HttpReply) () {
+  dever.http.start(reply, 200, [dever.http.header("Content-Type", "text/plain")])
+  dever.http.write(reply, dever.bytes.from_text("first\n"))
+  dever.task.sleep(100)
+  dever.http.write(reply, dever.bytes.from_text("second\n"))
+  dever.http.finish(reply)
+}
+
+path(target: "/ws", reply: dever.system.HttpReply) () {
+  upgraded(result(dever.websocket.accept(reply, dever.websocket.default_limits())), reply)
+}
+
+path(target: other, reply: dever.system.HttpReply) () {
+  dever.http.respond(
+    reply,
+    dever.http.Response {
+      status = 200
+      headers = [dever.http.header("Content-Type", "text/plain; charset=utf-8")]
+      body = dever.bytes.from_text("Dever: /stream, /events, /ws")
+    }
+  )
+}
+
+tick(index: Int, reply: dever.system.HttpReply) () {
+  dever.task.sleep(100)
+  dever.sse.send(
+    reply,
+    dever.sse.Event {
+      event = "tick"
+      data = int.to_text(index)
+      id = int.to_text(index)
+      retry_ms = 1000
+    }
+  )
+}
+
+upgraded(
+  result: dever.websocket.ConnectResult.Connected(socket),
+  reply: dever.system.HttpReply
+) () recover("WebSocket handshake errors are returned as HTTP 400") {
+  each(message, dever.websocket.messages(socket), socket)
+}
+
+upgraded(
+  result: dever.websocket.ConnectResult.Failed(message),
+  reply: dever.system.HttpReply
+) () recover("WebSocket handshake errors are returned as HTTP 400") {
+  dever.http.respond(
+    reply,
+    dever.http.Response {
+      status = 400
+      headers = []
+      body = dever.bytes.from_text(message)
+    }
+  )
+}
+
+message(
+  event: dever.websocket.MessageEvent.Read(value),
+  socket: dever.system.WebSocket
+) () {
+  echo(value, socket)
+}
+
+message(
+  event: dever.websocket.MessageEvent.Failed(message),
+  socket: dever.system.WebSocket
+) () {
+  fail(dever.websocket.MessageEvent.Failed(message))
+}
+
+echo(value: dever.websocket.Message.Text(text), socket: dever.system.WebSocket) () {
+  dever.websocket.send(socket, dever.websocket.Message.Text(text))
+}
+
+echo(value: dever.websocket.Message.Binary(bytes), socket: dever.system.WebSocket) () {
+  dever.websocket.send(socket, dever.websocket.Message.Binary(bytes))
+}
+
+# Ping/Pong 已由协议引擎处理，应用只消费控制帧。
+echo(value: other, socket: dever.system.WebSocket) () {}
+
+main() () {
+  listener = dever.net.listen("127.0.0.1", 0)
+  port = dever.net.port(listener)
+  blocking(
+    dever.io.println("HTTP / SSE / WebSocket on 127.0.0.1:" + int.to_text(port))
+  )
+  dever.http.serve_live(
+    route,
+    listener,
+    dever.http.default_limits(),
+    dever.http.default_live_limits()
+  )
+}

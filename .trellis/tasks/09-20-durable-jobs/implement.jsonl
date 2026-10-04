@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Source role, static target, effect and visibility contracts"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Transaction, connection, migration and cancellation invariants"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Structured concurrency, native runtime and shutdown"}
+{"file":".trellis/tasks/09-13-typed-orm/design.md","reason":"Existing SQLite/PostgreSQL transaction and pool architecture"}
+{"file": ".trellis/tasks/09-20-durable-jobs/research/implementation-map.md", "reason": "Verified source ownership and implementation risks"}

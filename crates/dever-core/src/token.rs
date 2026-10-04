@@ -1,0 +1,51 @@
+use crate::source::Span;
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum Kind {
+    Name(String),
+    Number(String),
+    Text(String),
+    Comment(String),
+    Package,
+    Exposes,
+    Public,
+    Type,
+    True,
+    False,
+    Null,
+    Other,
+    And,
+    Or,
+    Not,
+    LeftParen,
+    RightParen,
+    LeftBrace,
+    RightBrace,
+    LeftBracket,
+    RightBracket,
+    Colon,
+    Comma,
+    Dot,
+    Question,
+    Assign,
+    Plus,
+    Minus,
+    Star,
+    Slash,
+    IntegerDivide,
+    Percent,
+    Equal,
+    NotEqual,
+    Less,
+    LessEqual,
+    Greater,
+    GreaterEqual,
+    Newline,
+    End,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) struct Token {
+    pub kind: Kind,
+    pub span: Span,
+}

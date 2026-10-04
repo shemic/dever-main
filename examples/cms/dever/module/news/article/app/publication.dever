@@ -1,0 +1,95 @@
+transaction publish(article_id: model.id) (publication: model.publication.Publication) {
+  stored = model.get(article_id)
+  domain.require_owner(dever.auth.owns_user(stored.author_id))
+  domain.require_draft(stored.status == model.ArticleStatus.Draft)
+  publication = publish_draft(article_id)
+}
+
+published(size: Int) (articles: model.publication.Page) {
+  articles = model.publication.list(
+    {
+      order = [published_at.desc, id.desc]
+      size = domain.page_size(size)
+    }
+  )
+}
+
+published_detail(id: model.publication.id) (article: model.publication.Publication) {
+  article = model.publication.get(id)
+  domain.require_published(text.trim(article.body) != "")
+}
+
+transaction publish_scheduled(article_id: model.id) (
+  publication: model.publication.Publication
+) {
+  stored = model.get(article_id)
+  publication = scheduled_publication(stored.status, article_id)
+}
+
+scheduled_publication(status: model.ArticleStatus.Published, article_id: model.id) (
+  publication: model.publication.Publication
+) {
+  stored = model.get(article_id)
+  publication = existing_publication(
+    model.publication.first(
+      {
+        where = slug == stored.slug
+      }
+    )
+  )
+}
+
+scheduled_publication(status: model.ArticleStatus.Draft, article_id: model.id) (
+  publication: model.publication.Publication
+) {
+  publication = publish_draft(article_id)
+}
+
+publish_draft(article_id: model.id) (publication: model.publication.Publication) {
+  stored = model.get(article_id)
+  domain.require_draft(stored.status == model.ArticleStatus.Draft)
+  content.category.require_active(stored.category_id)
+  media.asset.require_ready(stored.asset_id)
+  published_at = dever.time.now()
+  changed = model.update(
+    {
+      where = id == stored.id and version == stored.version and status == model.ArticleStatus.Draft
+    },
+    {
+      status = model.ArticleStatus.Published
+      published_at = published_at
+      version = stored.version + 1
+    }
+  )
+  domain.require_updated(changed)
+  audit.operation.record(
+    audit.operation.model.OperationKind.Publish,
+    "article",
+    stored.slug
+  )
+  publication = model.publication.upsert(
+    {
+      slug = stored.slug
+    },
+    {
+      title = stored.title
+      body = stored.body
+      published_at = published_at
+    },
+    {
+      title = stored.title
+      body = stored.body
+      published_at = published_at
+    }
+  )
+}
+
+existing_publication(stored: model.publication.Publication) (
+  publication: model.publication.Publication
+) {
+  publication = stored
+}
+
+existing_publication(stored: null) (publication: model.publication.Publication) {
+  fail(dever.api.Error.NotFound)
+}

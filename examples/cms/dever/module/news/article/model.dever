@@ -1,0 +1,25 @@
+type ArticleStatus {
+  Draft = "草稿"
+  Published = "已发布"
+}
+
+type Article {
+  private owner author_id: user.account.model.principal.id = dever.auth.user_id()
+  slug: Text(1, 180) unique
+  title: Text(1, 160)
+  body: Text
+  category_id: content.category.model.id?
+  asset_id: media.asset.model.id?
+  private version: Int default 1
+  private status: ArticleStatus default ArticleStatus.Draft index
+  private published_at: DateTime?
+}
+
+index(author_id, created_at)
+
+sql owned_articles(author: user.account.model.principal.id, size: Int) (
+  articles: List<app.ArticleView>
+) {
+  sqlite = "SELECT id, slug, title, body, version, category_id, asset_id FROM article WHERE author_id = ?1 ORDER BY id DESC LIMIT ?2"
+  postgres = "SELECT id, slug, title, body, version, category_id, asset_id FROM article WHERE author_id = $1 ORDER BY id DESC LIMIT $2"
+}

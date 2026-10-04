@@ -1,0 +1,68 @@
+public type Claims {
+  subject: Text
+  session: Text
+  tenant: Text?
+  site: Text
+}
+
+public type Permission {
+  key: Text
+  component: Text
+  domain: Text
+  site: Text
+  action: Text
+  method: Text
+}
+
+public issue(subject: Text, session: Text, tenant: Text?) (token: Secret) {
+  token = dever.system.auth_issue(subject, session, tenant)
+}
+
+public issue_cookie(subject: Text, session: Text, tenant: Text?) () {
+  dever.system.auth_issue_cookie(subject, session, tenant)
+}
+
+public clear_cookie() () {
+  dever.system.auth_clear_cookie()
+}
+
+public id() (value: Text) {
+  value = dever.system.auth_id()
+}
+
+public session() (value: Text) {
+  value = dever.system.auth_session()
+}
+
+public user_id() (value: Int?) {
+  value = dever.system.auth_user_id()
+}
+
+public tenant_id() (value: Int?) {
+  value = dever.system.auth_tenant_id()
+}
+
+public permissions() (values: List<Permission>) {
+  values = dever.system.auth_permissions()
+}
+
+public save_role(
+  id: Text,
+  name: Text,
+  all_permissions: Bool,
+  permission_keys: List<Text>
+) () {
+  dever.system.auth_save_role(id, name, all_permissions, permission_keys)
+}
+
+public grant_role(user_id: Int, role_id: Text) () {
+  dever.system.auth_grant_role(user_id, role_id)
+}
+
+public revoke_role(user_id: Int, role_id: Text) () {
+  dever.system.auth_revoke_role(user_id, role_id)
+}
+
+public disable_role(role_id: Text) () {
+  dever.system.auth_disable_role(role_id)
+}

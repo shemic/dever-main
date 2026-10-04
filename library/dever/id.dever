@@ -1,0 +1,7 @@
+public from_text(text: Text) (id: Id) {
+  id = dever.system.id_from_text(text)
+}
+
+public to_text(id: Id) (text: Text) {
+  text = dever.system.id_to_text(id)
+}

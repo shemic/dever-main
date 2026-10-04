@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Final application role/API/Job/visibility contract"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"CMS Models, transactions, migrations and test isolation"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"Audit and secret-free request logging"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Runtime modes, Port/Job/API standard packages"}

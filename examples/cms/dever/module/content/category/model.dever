@@ -1,0 +1,10 @@
+type CategoryStatus {
+  Active = "启用"
+  Disabled = "禁用"
+}
+
+type Category {
+  name: Text(1, 80)
+  slug: Text(1, 100) unique
+  status: CategoryStatus default CategoryStatus.Active index
+}

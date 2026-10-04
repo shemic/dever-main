@@ -1,0 +1,53 @@
+public type DecodeResult {
+  Decoded(text: Text)
+  error Failed(message: Text)
+}
+
+public type BufferResult {
+  Ready(bytes: Bytes)
+  error Failed(message: Text)
+}
+
+public from_text(text: Text) (bytes: Bytes) {
+  bytes = dever.system.bytes_from_text(text)
+}
+
+public to_text(bytes: Bytes) (text: Text) {
+  text = decoded(dever.system.bytes_to_text(bytes))
+}
+
+decoded(result: DecodeResult.Decoded(value)) (text: Text) {
+  text = value
+}
+
+decoded(result: DecodeResult.Failed(message)) (text: Text) {
+  fail(DecodeResult.Failed(message))
+}
+
+public from_ints(values: List<Int>) (bytes: Bytes) {
+  bytes = ready(dever.system.bytes_from_ints(values))
+}
+
+public length(bytes: Bytes) (length: Int) {
+  length = dever.system.bytes_length(bytes)
+}
+
+public at(bytes: Bytes, index: Int) (value: Int?) {
+  value = dever.system.bytes_at(bytes, index)
+}
+
+public slice(bytes: Bytes, start: Int, end: Int) (result: Bytes) {
+  result = ready(dever.system.bytes_slice(bytes, start, end))
+}
+
+ready(result: BufferResult.Ready(bytes)) (value: Bytes) {
+  value = bytes
+}
+
+ready(result: BufferResult.Failed(message)) (value: Bytes) {
+  fail(BufferResult.Failed(message))
+}
+
+public concat(left: Bytes, right: Bytes) (bytes: Bytes) {
+  bytes = dever.system.bytes_concat(left, right)
+}

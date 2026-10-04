@@ -1,0 +1,8 @@
+/target/
+/config/setting.json
+/.release-key.*/
+/.trellis/workspace/
+/.agents/
+/.codex/
+**/__pycache__/
+**/*.pyc

@@ -1,0 +1,21 @@
+ready(port: Int) () {
+  dever.io.println("READY|" + int.to_text(port))
+}
+
+pause(millis: Int) () {
+  dever.task.sleep(millis)
+}
+
+report(
+  begin: Int,
+  finish: Int,
+  name: Text,
+  count: Int,
+  checksum: Int
+) () recover("基准失败输出由运行器检查") {
+  dever.io.println(
+    "SAMPLE|" + name + "|" + int.to_text(count) + "|" + int.to_text(finish - begin) + "|" + int.to_text(
+      checksum
+    )
+  )
+}

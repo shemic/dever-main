@@ -1,0 +1,11 @@
+publish() () {
+  assert_eq(domain.normalize_slug(" News-Article "), "news-article")
+  assert_eq(domain.normalize_title("  First article  "), "First article")
+  assert_eq(domain.page_size(1), 1)
+  assert_eq(domain.page_size(100), 100)
+  domain.require_owner(true)
+  domain.require_draft(true)
+  domain.require_updated(1)
+  domain.require_content("news", "Title", "Body")
+  domain.require_published(true)
+}

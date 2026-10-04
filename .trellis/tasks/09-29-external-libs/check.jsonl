@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"定向测试、真实 CLI 和资源生命周期验证要求"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"业务 error、runtime fault 和协议错误边界"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"新增实现必须归属现有 compiler/runtime/CLI owners"}
+{"file":".trellis/tasks/09-29-external-libs/prd.md","reason":"父任务跨子任务验收标准"}

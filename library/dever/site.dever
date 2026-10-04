@@ -1,0 +1,3 @@
+public key() (value: Text) {
+  value = dever.system.site_key()
+}

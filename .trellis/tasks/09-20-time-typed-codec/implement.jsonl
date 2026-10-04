@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Type properties, private boundaries and generated contracts"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Official time/json packages and native runtime boundary"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Date/time storage representation and ORM compatibility"}

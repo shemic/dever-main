@@ -1,0 +1,21 @@
+
+sum_byte(value: Int, total: Int) (next: Int) {
+  next = total + value
+}
+
+consume(event: dever.io.ReadEvent.Chunk(bytes), total: Int) (next: Int) {
+  next = total + reduce(sum_byte, bytes, 0)
+}
+
+consume(event: dever.io.ReadEvent.Failed(message), total: Int) (
+  next: Int
+) {
+  fail(dever.io.ReadEvent.Failed(message))
+}
+
+main() (total: Int) {
+  file = dever.io.open("examples/old/dever/stream/input.txt")
+  stream = dever.io.chunks(file, 2)
+  total = reduce(consume, stream, 0)
+  close(stream)
+}

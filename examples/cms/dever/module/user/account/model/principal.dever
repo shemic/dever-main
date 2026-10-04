@@ -1,0 +1,10 @@
+type PrincipalStatus {
+  Active = "启用"
+  Disabled = "禁用"
+}
+
+global type Principal {
+  uuid: Uuid generated unique
+  display_name: Text(1, 64)
+  status: PrincipalStatus default PrincipalStatus.Active index
+}

@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"检查 HTTP2 的结构化归属、资源容量和桥接"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"定向测试和无全量测试约束"}
+{"file":".trellis/tasks/09-12-http2/prd.md","reason":"完整范围和验收"}
+{"file":".trellis/tasks/09-12-http2/design.md","reason":"协议配置与生命周期"}

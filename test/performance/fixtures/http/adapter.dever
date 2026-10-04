@@ -1,0 +1,136 @@
+type Content {
+  body: Bytes
+  kind: Text
+}
+
+listening(result: dever.net.ListenResult.Listening(listener)) (
+  value: dever.system.Listener
+) {
+  value = listener
+}
+
+listening(result: dever.net.ListenResult.Failed(message)) (value: dever.system.Listener) {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+bound(result: dever.net.PortResult.Bound(port)) (value: Int) {
+  value = port
+}
+
+bound(result: dever.net.PortResult.Failed(message)) (value: Int) {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+paused(result: dever.time.SleepResult.Done) () {}
+
+paused(result: dever.time.SleepResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+closed(result: dever.io.CloseResult.Closed) () {}
+
+closed(result: dever.io.CloseResult.Failed(message)) () {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+server_tls(result: dever.tls.ServerResult.Ready(tls)) (value: dever.system.ServerTls) {
+  value = tls
+}
+
+server_tls(result: dever.tls.ServerResult.Failed(message)) (
+  value: dever.system.ServerTls
+) {
+  fail(app.WorkerFailure.Failed(message))
+}
+
+response_value(content: Content) (result: dever.http.Response) {
+  result = dever.http.Response {
+    status = 200
+    headers = [dever.http.header("Content-Type", content.kind)]
+    body = content.body
+  }
+}
+
+route(request: dever.http.Request, large: Bytes) (response: dever.http.Response) {
+  response = response_value(select(request.target, large))
+}
+
+select(path: "/plain", large: Bytes) (result: Content) {
+  result = Content {
+    body = dever.bytes.from_text("hello")
+    kind = "text/plain"
+  }
+}
+
+select(path: "/json", large: Bytes) (result: Content) {
+  result = Content {
+    body = dever.bytes.from_text("{\"ok\":true}")
+    kind = "application/json"
+  }
+}
+
+select(path: "/bytes", large: Bytes) (result: Content) {
+  result = Content {
+    body = large
+    kind = "application/octet-stream"
+  }
+}
+
+select(path: other, large: Bytes) (result: Content) {
+  result = Content {
+    body = dever.bytes.from_text("unknown benchmark path")
+    kind = "text/plain"
+  }
+}
+
+serve(
+  listener: dever.system.Listener,
+  tls: null,
+  limits: dever.http.Limits,
+  large: Bytes
+) () {
+  dever.system.http_serve(route, listener, limits, large)
+}
+
+serve(
+  listener: dever.system.Listener,
+  tls: dever.system.ServerTls,
+  limits: dever.http.Limits,
+  large: Bytes
+) () {
+  dever.system.http_serve_tls(route, listener, limits, tls, large)
+}
+
+worker(
+  tls: dever.system.ServerTls?,
+  limits: dever.http.Limits,
+  large: Bytes,
+  lifetime: Int
+) () {
+  listener = listening(result(dever.net.listen("127.0.0.1", 0)))
+  port = bound(result(dever.net.port(listener)))
+  server = run(serve(listener, tls, limits, large))
+  blocking(dever.io.println("READY|" + int.to_text(port)))
+  paused(result(dever.task.sleep(lifetime)))
+  closed(result(dever.net.close_listener(listener)))
+  stop(server)
+}
+
+port.plain(limits: dever.http.Limits, large: Bytes, lifetime: Int) () {
+  worker(null, limits, large, lifetime)
+}
+
+port.secure(
+  limits: dever.http.Limits,
+  large: Bytes,
+  lifetime: Int,
+  certificate: Bytes,
+  key: Bytes
+) () {
+  worker(
+    server_tls(result(dever.tls.server(certificate, key))),
+    limits,
+    large,
+    lifetime
+  )
+}

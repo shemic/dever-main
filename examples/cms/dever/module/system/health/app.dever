@@ -1,0 +1,9 @@
+type HealthView {
+  status: Text
+}
+
+ping() (result: HealthView) {
+  result = HealthView {
+    status = "ready"
+  }
+}

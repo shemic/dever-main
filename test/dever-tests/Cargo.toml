@@ -1,0 +1,363 @@
+[package]
+name = "dever-tests"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+autotests = false
+
+[[test]]
+name = "llvm_lowering"
+path = "../llvm_lowering.rs"
+
+[[test]]
+name = "runtime_entry_cleanup"
+path = "../runtime_entry_cleanup.rs"
+
+[[test]]
+name = "upload_boundary"
+path = "tests/upload_boundary.rs"
+required-features = ["api"]
+
+[[test]]
+name = "api_declarations"
+path = "tests/api_declarations.rs"
+
+[[test]]
+name = "native_entry"
+path = "tests/native_entry.rs"
+
+[[test]]
+name = "api_context"
+path = "tests/api_context.rs"
+
+[[test]]
+name = "rest_model"
+path = "tests/rest_model.rs"
+
+[[test]]
+name = "durable_jobs"
+path = "tests/durable_jobs.rs"
+
+[[test]]
+name = "port_adapter"
+path = "tests/port_adapter.rs"
+
+[[test]]
+name = "external_component"
+path = "tests/external_component.rs"
+required-features = ["external"]
+
+[[test]]
+name = "external_resources"
+path = "tests/external_resources.rs"
+required-features = ["external"]
+
+[[bin]]
+name = "component-fixture"
+path = "fixtures/component_fixture.rs"
+
+[[bin]]
+name = "command-fixture"
+path = "fixtures/command_fixture.rs"
+
+[[test]]
+name = "external_command"
+path = "tests/external_command.rs"
+required-features = ["external"]
+
+[[test]]
+name = "async_composition"
+path = "tests/async_composition.rs"
+
+[[test]]
+name = "pooled_network"
+path = "tests/pooled_network.rs"
+
+[[test]]
+name = "pooled_library"
+path = "tests/pooled_library.rs"
+
+[[test]]
+name = "markdown_source"
+path = "tests/markdown_source.rs"
+
+[[test]]
+name = "cms_acceptance"
+path = "tests/cms_acceptance.rs"
+
+[[test]]
+name = "native_cache"
+path = "tests/native_cache.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+serde_json.workspace = true
+
+[dev-dependencies]
+bytes.workspace = true
+dever-core.workspace = true
+dever-runtime.workspace = true
+futures-util.workspace = true
+http-body-util.workspace = true
+h2 = "=0.4.19"
+hyper.workspace = true
+hyper-util.workspace = true
+rustls.workspace = true
+sha2.workspace = true
+tokio.workspace = true
+tokio-rustls.workspace = true
+tokio-tungstenite.workspace = true
+
+[[test]]
+name = "async_network"
+path = "tests/async_network.rs"
+
+[[test]]
+name = "async_stream"
+path = "tests/async_stream.rs"
+
+[features]
+reference = ["dever-core/reference"]
+sqlite = ["dever-runtime/sqlite"]
+postgres = ["dever-runtime/postgres"]
+api = ["dever-runtime/api"]
+crypto = ["dever-runtime/crypto"]
+component = ["dever-runtime/wire"]
+external = ["component", "dever-runtime/external"]
+
+[[test]]
+name = "secure_contracts"
+path = "tests/secure_contracts.rs"
+required-features = ["crypto"]
+
+[[test]]
+name = "contract_syntax"
+path = "tests/contract_syntax.rs"
+
+[[test]]
+name = "contract_api"
+path = "tests/contract_api.rs"
+
+[[test]]
+name = "contract_semantics"
+path = "tests/contract_semantics.rs"
+
+[[test]]
+name = "contract_facts"
+path = "tests/contract_facts.rs"
+
+[[test]]
+name = "contract_redundancy"
+path = "tests/contract_redundancy.rs"
+
+[[test]]
+name = "contract_execution"
+path = "tests/contract_execution.rs"
+
+[[test]]
+name = "error_effects"
+path = "tests/error_effects.rs"
+
+[[test]]
+name = "logging"
+path = "tests/logging.rs"
+
+[[test]]
+name = "model_syntax"
+path = "tests/model_syntax.rs"
+
+[[test]]
+name = "orm_query"
+path = "tests/orm_query.rs"
+
+[[test]]
+name = "orm_relations"
+path = "tests/orm_relations.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_native_sql"
+path = "tests/orm_native_sql.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_performance_fixture"
+path = "tests/orm_performance_fixture.rs"
+
+[[test]]
+name = "performance_port_fixture"
+path = "tests/performance_port_fixture.rs"
+
+[[test]]
+name = "application_config"
+path = "tests/application_config.rs"
+
+[[test]]
+name = "auth_runtime"
+path = "tests/auth_runtime.rs"
+required-features = ["api"]
+
+[[test]]
+name = "authorization_runtime"
+path = "tests/authorization_runtime.rs"
+required-features = ["api", "sqlite"]
+
+[[test]]
+name = "authorization_postgres"
+path = "tests/authorization_postgres.rs"
+required-features = ["api", "postgres"]
+
+[[test]]
+name = "postgres_api"
+path = "tests/postgres_api.rs"
+required-features = ["api", "postgres"]
+
+[[test]]
+name = "sqlite_runtime"
+path = "tests/sqlite_runtime.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "tenant_database"
+path = "tests/tenant_database.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "sqlite_orm"
+path = "tests/sqlite_orm.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_migration"
+path = "tests/orm_migration.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_data_migration"
+path = "tests/orm_data_migration.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_seed"
+path = "tests/orm_seed.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "orm_connections"
+path = "tests/orm_connections.rs"
+required-features = ["sqlite"]
+
+[[test]]
+name = "postgres_orm"
+path = "tests/postgres_orm.rs"
+required-features = ["postgres"]
+
+[[test]]
+name = "differential"
+path = "tests/differential.rs"
+required-features = ["reference"]
+
+[[test]]
+name = "http_library"
+path = "tests/http_library.rs"
+
+[[test]]
+name = "http_engine"
+path = "tests/http_engine.rs"
+
+[[test]]
+name = "http2_client"
+path = "tests/http2_client.rs"
+
+[[test]]
+name = "http2_server"
+path = "tests/http2_server.rs"
+
+[[test]]
+name = "live_network"
+path = "tests/live_network.rs"
+
+[[test]]
+name = "live_library"
+path = "tests/live_library.rs"
+
+[[test]]
+name = "syntax_and_format"
+path = "tests/syntax_and_format.rs"
+
+[[test]]
+name = "hello_native"
+path = "tests/hello_native.rs"
+
+[[test]]
+name = "core_semantics"
+path = "tests/core_semantics.rs"
+
+[[test]]
+name = "core_native"
+path = "tests/core_native.rs"
+
+[[test]]
+name = "runtime_foundations"
+path = "tests/runtime_foundations.rs"
+
+[[test]]
+name = "formatter"
+path = "tests/formatter.rs"
+
+[[test]]
+name = "json_library"
+path = "tests/json_library.rs"
+
+[[test]]
+name = "standard_library"
+path = "tests/standard_library.rs"
+
+[[test]]
+name = "time_codec"
+path = "tests/time_codec.rs"
+required-features = ["api", "reference"]
+
+[[test]]
+name = "native_ownership"
+path = "tests/native_ownership.rs"
+
+[[test]]
+name = "concurrency"
+path = "tests/concurrency.rs"
+
+[[test]]
+name = "performance"
+path = "tests/performance.rs"
+
+[[test]]
+name = "async_runtime"
+path = "tests/async_runtime.rs"
+
+[[test]]
+name = "structured_concurrency"
+path = "tests/structured_concurrency.rs"
+
+[[test]]
+name = "async_native"
+path = "tests/async_native.rs"
+
+[[test]]
+name = "source_visibility"
+path = "tests/source_visibility.rs"
+
+[[test]]
+name = "source_architecture"
+path = "tests/source_architecture.rs"
+
+[[test]]
+name = "application_testing"
+path = "tests/application_testing.rs"
+
+[[test]]
+name = "api_routes"
+path = "tests/api_routes.rs"
+required-features = ["api"]

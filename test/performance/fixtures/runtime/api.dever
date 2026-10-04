@@ -1,0 +1,11 @@
+cmd sync_idle = app.sync_idle
+
+cmd async_idle = app.async_idle
+
+cmd tasks = app.tasks
+
+cmd tasks_on_worker = app.tasks_on_worker
+
+cmd channels = app.channels
+
+cmd cancel = app.cancel

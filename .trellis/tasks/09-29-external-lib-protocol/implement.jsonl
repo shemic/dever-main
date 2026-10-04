@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"external Adapter 必须复用 Port、role、failure/effect 和 test fake 合同"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"wire、native emission、settings 和 structured lifecycle 合同"}
+{"file":".trellis/tasks/09-20-port-adapter/design.md","reason":"现有 Adapter registration、closed dispatch 和 setting 设计"}
+{"file":".trellis/tasks/09-29-external-libs/design.md","reason":"父任务协议、source 和安全边界"}

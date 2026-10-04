@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Source roles, visibility, effects, API and application contract baseline"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Model privacy, transactions, settings and SQLite/PostgreSQL invariants"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Official package, native runtime and lifecycle contracts"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"Secret-free logging and HTTP request boundary"}

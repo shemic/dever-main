@@ -1,0 +1,29 @@
+# Nodes use consecutive postorder IDs starting at zero. Children precede their parent.
+public type Value {
+  Null
+  Boolean(value: Bool)
+  Number(raw: Text)
+  String(text: Text)
+  Array(children: List<Int>)
+  Object(members: Map<Text, Int>)
+}
+
+public type Document {
+  root: Int
+  nodes: Map<Int, Value>
+}
+
+# Parse positions are zero-based Unicode scalar offsets, including the EOF position.
+public type ParseResult {
+  Parsed(document: Document)
+  error Failed(position: Int, message: Text)
+}
+
+public type WriteResult {
+  Written(text: Text)
+  error Failed(node: Int, message: Text)
+}
+
+public maximum_depth() (result: Int) {
+  result = 256
+}

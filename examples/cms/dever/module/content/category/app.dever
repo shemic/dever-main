@@ -1,0 +1,41 @@
+type CategoryView {
+  id: model.id
+  name: Text
+  slug: Text
+  status: Text
+}
+
+create(name: Text) (category: CategoryView) {
+  normalized = domain.normalize_name(name)
+  domain.require_name(normalized)
+  stored = model.create(
+    {
+      name = normalized
+      slug = domain.normalize_slug(normalized)
+    }
+  )
+  category = CategoryView {
+    id = stored.id
+    name = stored.name
+    slug = stored.slug
+    status = "active"
+  }
+}
+
+disable(id: model.id) (ok: Bool) {
+  changed = model.update(
+    id,
+    {
+      status = model.CategoryStatus.Disabled
+    }
+  )
+  discarded = changed
+  ok = true
+}
+
+require_active(id: model.id) () {
+  stored = model.get(id)
+  domain.require_active(stored.status == model.CategoryStatus.Active)
+}
+
+require_active(id: null) () {}

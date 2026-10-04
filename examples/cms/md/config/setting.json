@@ -1,0 +1,56 @@
+{
+  "runtime": {
+    "mode": "all",
+    "shutdown_ms": 30000
+  },
+  "job": {
+    "workers": 1,
+    "poll_ms": 1000,
+    "lease_ms": 60000,
+    "retry_base_ms": 1000,
+    "retry_max_ms": 300000
+  },
+  "http": {
+    "host": "127.0.0.1",
+    "port": 8080
+  },
+  "database": {
+    "default": {
+      "type": "sqlite",
+      "path": "data/db/platform.db",
+      "tenant_directory": "data/tenants",
+      "max_connections": 4,
+      "max_page_size": 100
+    }
+  },
+  "tenant": {
+    "database": "default",
+    "max_pools": 32,
+    "idle_timeout_ms": 300000
+  },
+  "auth": {
+    "providers": {
+      "session": {
+        "verify": "user.account.verify",
+        "jwtSecret": "replace-this-example-secret-before-deployment-2026",
+        "ttlSeconds": 3600,
+        "cookie": "cms_session"
+      }
+    }
+  },
+  "sites": {
+    "admin": {
+      "path": "admin",
+      "auth": "session",
+      "origin": "https://cms.example.com"
+    },
+    "front": {
+      "path": "front",
+      "auth": "session",
+      "origin": "https://cms.example.com"
+    }
+  },
+  "log": {
+    "level": "info"
+  }
+}

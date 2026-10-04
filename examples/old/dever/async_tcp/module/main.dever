@@ -1,0 +1,24 @@
+
+connection(event: dever.net.ConnectResult.Connected(socket)) () recover("监听错误是流的最后一项，记录后结束服务") {
+  dever.net.timeout(socket, 5000)
+  dever.net.write(socket, dever.bytes.from_text("Hello from Dever\n"))
+  dever.net.close(socket)
+}
+
+connection(event: dever.net.ConnectResult.Failed(message)) () recover("监听错误是流的最后一项，记录后结束服务") {
+  blocking(dever.io.println(message))
+}
+
+serve() () {
+  listener = dever.net.listen("127.0.0.1", 0)
+  # 随机分配本机端口；最多同时处理 32 条连接。
+  port = dever.net.port(listener)
+  blocking(dever.io.println(int.to_text(port)))
+  stream = dever.net.connections(listener)
+  parallel_each(connection, stream, 32)
+  dever.net.close_listener(listener)
+}
+
+main() () {
+  serve()
+}

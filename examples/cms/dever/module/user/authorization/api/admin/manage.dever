@@ -1,0 +1,9 @@
+get permissions = app.permissions
+
+post save = app.save
+
+post grant = app.grant
+
+delete revoke = app.revoke
+
+delete disable = app.disable

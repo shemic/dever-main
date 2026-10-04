@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Rust 语言分层与 root test 布局"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"HTTP、TLS、流、结构化任务及原生桥接合同"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"程序故障与 peer 失败边界"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"有界定向验证与原生测试"}
+{"file":".trellis/tasks/09-12-http2/design.md","reason":"本阶段已批准接口与生命周期设计"}

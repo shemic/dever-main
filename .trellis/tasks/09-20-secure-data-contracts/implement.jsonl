@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Private fields, public boundaries and type properties"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"Model field schema and generated CRUD ownership"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Official package and intrinsic implementation rules"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"Secret-free render and log requirements"}

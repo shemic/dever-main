@@ -1,0 +1,134 @@
+
+type Pair {
+  left: Int
+  right: Int
+}
+
+type Number {
+  Present(value: Int)
+  Missing
+}
+
+type Key {
+  First
+  Second
+}
+
+number(value: Number.Present(payload)) (answer: Int) {
+  answer = payload
+}
+
+number(value: other) (answer: Int) {
+  answer = 0
+}
+
+grade(value: Int < 0) (answer: Text) {
+  answer = "negative"
+}
+
+grade(value: Int >= 0 and < 10) (answer: Text) {
+  answer = "small"
+}
+
+grade(value: Int >= 10) (answer: Text) {
+  answer = "large"
+}
+
+scale(value: Int, factor: Int) (answer: Int) {
+  answer = value * factor
+}
+
+positive(value: Int) (answer: Bool) {
+  answer = value > 0
+}
+
+target(value: Int, expected: Int) (answer: Bool) {
+  answer = value == expected
+}
+
+parts(value: Text) (first: Text, last: Text) {
+  first = text.trim(value)
+  last = text.lower(first)
+}
+
+change(pair: Pair) (answer: Pair) {
+  pair.left = 99
+  answer = pair
+}
+
+map_key(entry: MapEntry<Text, Int>) (key: Text) {
+  key = entry.key
+}
+
+optional(value: Int?) (answer: Int?) {
+  answer = value
+}
+
+main() (
+  original: Int,
+  changed: Int,
+  choice: Int,
+  category: Text,
+  exact: Bool,
+  quotient: Decimal,
+  third: Decimal,
+  rounded: Decimal,
+  integer_division: Int,
+  remainder: Int,
+  selected: List<Int>,
+  found: Int?,
+  total: Int,
+  empty_total: Decimal,
+  names: Text,
+  ordered_keys: List<Text>,
+  maps_equal: Bool,
+  nan_equal: Bool,
+  finite: Bool,
+  optionals: List<Int?>,
+  key_value: Int?,
+  identity: Bool
+) {
+  pair = Pair {
+    right = 2
+    left = 1
+  }
+  saved = pair
+  pair = change(pair)
+  original = saved.left
+  changed = pair.left
+  choice = number(Number.Present(7)) + number(Number.Missing)
+  category = grade(12)
+  exact = 0.1 + 0.2 == 0.3
+  quotient = 5 / 2
+  third = 1 / 3
+  rounded = decimal.round(2.345, 2)
+  integer_division = -5 // 2
+  remainder = -5 % 2
+  values = each(scale, [-1, 0, 1, 2], 3)
+  selected = filter(positive, values)
+  found = find(target, values, 3)
+  total = sum(scale, selected, 2)
+  empty_total = sum([])
+  split = parts(" ABC ")
+  names = split.first + split.last
+  labels = {
+    "first" = 1
+    "second" = 2
+  }
+  original_labels = labels
+  labels = put(labels, "first", 3)
+  labels = remove(labels, "first")
+  labels = put(labels, "first", 1)
+  ordered_keys = each(map_key, entries(labels))
+  maps_equal = labels == original_labels
+  nan = 0.0e0 / 0.0e0
+  nan_equal = [nan] == [nan]
+  finite = math.is_finite(float.from_int(4))
+  optionals = each(optional, [null, 1, null])
+  keys = {
+    Key.First = 1
+    Key.Second = 2
+  }
+  key_value = get(keys, Key.Second)
+  identity = dever.id.from_text("stable") == dever.id.from_text("stable")
+}

@@ -1,0 +1,39 @@
+public type ClientResult {
+  Ready(config: dever.system.ClientTls)
+  error Failed(message: Text)
+}
+
+public type ServerResult {
+  Ready(config: dever.system.ServerTls)
+  error Failed(message: Text)
+}
+
+# 内置公共 CA；校验证书链、有效期和连接目标名称。
+public system() (config: dever.system.ClientTls) {
+  config = dever.system.tls_system()
+}
+
+# 仅信任给定 PEM CA；不提供跳过校验的模式。
+public client(ca_pem: Bytes) (config: dever.system.ClientTls) {
+  config = client_config(dever.system.tls_client(ca_pem))
+}
+
+client_config(result: ClientResult.Ready(config)) (value: dever.system.ClientTls) {
+  value = config
+}
+
+client_config(result: ClientResult.Failed(message)) (value: dever.system.ClientTls) {
+  fail(ClientResult.Failed(message))
+}
+
+public server(cert_pem: Bytes, key_pem: Bytes) (config: dever.system.ServerTls) {
+  config = server_config(dever.system.tls_server(cert_pem, key_pem))
+}
+
+server_config(result: ServerResult.Ready(config)) (value: dever.system.ServerTls) {
+  value = config
+}
+
+server_config(result: ServerResult.Failed(message)) (value: dever.system.ServerTls) {
+  fail(ServerResult.Failed(message))
+}

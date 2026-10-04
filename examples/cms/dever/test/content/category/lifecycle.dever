@@ -1,0 +1,13 @@
+lifecycle() () {
+  category = app.create("  Dever News  ")
+  assert_eq(category.name, "Dever News")
+  assert_eq(category.slug, "dever news")
+  assert_eq(category.status, "active")
+  app.require_active(category.id)
+  app.require_active(null)
+  assert(app.disable(category.id))
+  independent = app.create("Announcements")
+  assert(independent.id != category.id)
+  assert_eq(independent.slug, "announcements")
+  app.require_active(independent.id)
+}

@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"定向验收与代码审查"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"配置、Model、事务和迁移不变量"}
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"双源码和错误合同"}

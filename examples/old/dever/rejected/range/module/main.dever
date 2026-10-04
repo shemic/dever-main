@@ -1,0 +1,11 @@
+# 预期 C011：0 不能构造合法端口。改为 8080 可通过。
+
+type Port {
+  value: Int >= 1 and <= 65535
+}
+
+main() (port: Port) {
+  port = Port {
+    value = 0
+  }
+}

@@ -1,0 +1,12 @@
+{"file":".trellis/tasks/09-29-language-production-closure/prd.md","reason":"按总任务验收标准检查范围是否完整"}
+{"file":".trellis/tasks/09-29-language-production-closure/design.md","reason":"检查 API、Lib、工具链边界是否重复或越界"}
+{"file":"LANGUAGE.md","reason":"核对当前语言已交付和未交付边界"}
+{"file":"IMPLEMENTATION.md","reason":"核对开发编译器与正式发行路径的实际差异"}
+{"file":".trellis/tasks/09-20-production-api/prd.md","reason":"本批LLVM API/REST/auth/tenant最新业务安全合同与原实现等价"}
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"typed roots/reachability/failure/affine Upload不放宽"}
+{"file":".trellis/spec/backend/database-guidelines.md","reason":"原事务/owned Session/数据库隔离和真实fixture"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"canonical ABI/布局/profile/清理"}
+{"file":".trellis/spec/backend/logging-guidelines.md","reason":"单logger、配置owner和敏感信息边界"}
+{"file":".trellis/tasks/09-19-application-testing/design.md","reason":"LLVM Test使用case-local checked/fake/数据库/虚拟时钟，保持单suite和原失败合同"}
+{"file": ".trellis/tasks/09-29-external-lib-protocol/prd.md", "reason": "沿用 external Adapter 协议、capability、超时取消与业务错误边界"}
+{"file": ".trellis/tasks/09-29-external-lib-packaging/prd.md", "reason": "沿用独立 Worker 资源校验和无宿主环境合同"}

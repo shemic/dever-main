@@ -1,0 +1,144 @@
+type Identity {
+  id: Text
+  user_id: model.id?
+  tenant_id: model.id?
+}
+
+verify(claims: dever.auth.Claims) (identity: Identity) {
+  identity = Identity {
+    id = claims.subject
+    user_id = null
+    tenant_id = null
+  }
+}
+
+ready() () {
+  blocking(bench.ready(0))
+}
+
+populate_one(value: Int) () {
+  created = model.create({
+    value = value
+    label = "fixture"
+  })
+}
+
+populate() () {
+  each(populate_one, config.orm_rows())
+}
+
+crud_once(value: Int) () {
+  begin = dever.time.monotonic_nanos()
+  created = model.create({
+    value = value
+    label = "created"
+  })
+  changed = model.update(created.id, { label = "updated" })
+  removed = model.delete(created.id)
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "crud", 1, changed + removed))
+}
+
+list_once(value: Int) () {
+  begin = dever.time.monotonic_nanos()
+  page = model.list({
+    order = id.asc
+    page = 1
+    size = 32
+  })
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "list", 1, page.total + length(page.items)))
+}
+
+cursor_once(value: Int) () {
+  begin = dever.time.monotonic_nanos()
+  page = model.cursor({
+    order = id.asc
+    size = 32
+  })
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "cursor", 1, length(page.items)))
+}
+
+count_item(value: model.Item, total: Int) (next: Int) {
+  next = total + 1
+}
+
+stream_once(value: Int) () {
+  begin = dever.time.monotonic_nanos()
+  rows = model.stream({
+    order = id.asc
+    size = 16
+  })
+  total = reduce(count_item, rows, 0)
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "stream", 1, total))
+}
+
+pool_once(value: Int) () {
+  begin = dever.time.monotonic_nanos()
+  total = model.count()
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "pool", 1, total))
+}
+
+transaction fill_cancelled_transaction() () {
+  created = model.create({
+    value = 1
+    label = "cancelled"
+  })
+  delayed = model.delay(config.orm_cancel_work())
+}
+
+orm_idle() (result: Bool) {
+  total = model.count()
+  blocking(bench.ready(total))
+  bench.pause(config.lifetime())
+  result = true
+}
+
+orm_crud() (result: Bool) {
+  ready()
+  each(crud_once, config.orm_input())
+  result = true
+}
+
+orm_list() (result: Bool) {
+  populate()
+  ready()
+  each(list_once, config.orm_input())
+  result = true
+}
+
+orm_cursor() (result: Bool) {
+  populate()
+  ready()
+  each(cursor_once, config.orm_input())
+  result = true
+}
+
+orm_stream() (result: Bool) {
+  ready()
+  each(stream_once, config.orm_input())
+  result = true
+}
+
+orm_pool() (result: Bool) {
+  ready()
+  parallel_each(pool_once, config.orm_input(), config.orm_concurrency())
+  result = true
+}
+
+orm_seed() (result: Bool) {
+  populate()
+  result = true
+}
+
+count() (total: Int) {
+  total = model.count()
+}
+
+cancel() (result: Bool) {
+  fill_cancelled_transaction()
+  result = true
+}

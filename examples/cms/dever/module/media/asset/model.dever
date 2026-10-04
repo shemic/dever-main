@@ -1,0 +1,12 @@
+type AssetStatus {
+  Ready = "就绪"
+  Removed = "已删除"
+}
+
+type Asset {
+  storage_key: Uuid unique
+  filename: Text(1, 255)
+  content_type: Text(1, 160)
+  size: Int
+  status: AssetStatus default AssetStatus.Ready index
+}

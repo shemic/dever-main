@@ -1,0 +1,84 @@
+public serve() () {
+  dever.system.api_serve()
+}
+
+# Upload is a compiler-owned affine POST input. upload_filename, upload_content_type
+# and upload_size borrow its metadata; close_upload consumes its temporary file.
+public close_upload(upload: Upload) () {
+  dever.system.upload_close(upload)
+}
+
+public type Error {
+  error Invalid
+  error Unauthorized
+  error Forbidden
+  error NotFound
+  error Conflict
+  error TooManyRequests
+}
+
+public type SameSite {
+  Strict
+  Lax
+  None
+}
+
+public type CookieOptions {
+  path: Text
+  domain: Text?
+  same_site: SameSite
+  secure: Bool
+  http_only: Bool
+  max_age: Int?
+}
+
+public secure_cookie_options() (options: CookieOptions) {
+  options = CookieOptions {
+    path = "/"
+    domain = null
+    same_site = SameSite.Lax
+    secure = true
+    http_only = true
+    max_age = null
+  }
+}
+
+public request_id() (id: Text) {
+  id = dever.system.api_request_id()
+}
+
+public method() (value: Text) {
+  value = dever.system.api_method()
+}
+
+public path() (value: Text) {
+  value = dever.system.api_path()
+}
+
+public client_address() (value: Text?) {
+  value = dever.system.api_client_address()
+}
+
+public header(name: Text) (value: Text?) {
+  value = dever.system.api_header(name)
+}
+
+public cookie(name: Text) (value: Text?) {
+  value = dever.system.api_cookie(name)
+}
+
+public secret_cookie(name: Text) (value: Secret?) {
+  value = dever.system.api_secret_cookie(name)
+}
+
+public set_header(name: Text, value: Text) () {
+  dever.system.api_response_header(name, value)
+}
+
+public set_cookie(name: Text, value: Text, options: CookieOptions) () {
+  dever.system.api_response_cookie(name, value, options)
+}
+
+public set_secret_cookie(name: Text, value: Secret, options: CookieOptions) () {
+  dever.system.api_response_secret_cookie(name, value, options)
+}

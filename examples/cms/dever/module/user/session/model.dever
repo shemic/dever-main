@@ -1,0 +1,12 @@
+global type Session {
+  uuid: Uuid generated unique
+  subject: Text(1, 128)
+  user_id: user.account.model.principal.id
+  tenant_id: platform.tenant.model.id
+  tenant_key: Text(1, 64)
+  site: Text(1, 32)
+  expires_at: DateTime index
+  revoked: Bool default false index
+}
+
+index(user_id, tenant_id, site)

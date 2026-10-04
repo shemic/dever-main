@@ -1,0 +1,28 @@
+# Task、Group 和 Channel 都有明确所有者；示例不启动服务或访问网络。
+
+pause() () {
+  dever.time.sleep(1)
+}
+
+square(value: Int) (result: Int) pure {
+  result = value * value
+}
+
+send_after(channel: Channel<Int>, value: Int) () {
+  dever.task.sleep(1)
+  send(channel, value)
+}
+
+main() (task_value: Int?, grouped_value: Int?, computed: Int) {
+  messages = channel(Int, 1)
+  sender = run(send_after(messages, 7))
+  task_value = receive(messages)
+  wait(sender)
+  workers = group(1)
+  run(workers, send_after(messages, 21))
+  wait(workers)
+  grouped_value = receive(messages)
+  computed = parallel(square(12))
+  blocking(pause())
+  close(messages)
+}

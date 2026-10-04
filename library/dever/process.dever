@@ -1,0 +1,26 @@
+public type Output {
+  code: Int
+  stdout: Bytes
+  stderr: Bytes
+}
+
+public type Error {
+  error Failed(message: Text)
+}
+
+public type ArgumentsResult {
+  Read(values: List<Text>)
+  error Failed(message: Text)
+}
+
+public arguments() (values: List<Text>) {
+  values = arguments_value(dever.system.process_arguments())
+}
+
+arguments_value(result: ArgumentsResult.Read(values)) (value: List<Text>) {
+  value = values
+}
+
+arguments_value(result: ArgumentsResult.Failed(message)) (value: List<Text>) {
+  fail(ArgumentsResult.Failed(message))
+}

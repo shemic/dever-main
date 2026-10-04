@@ -1,0 +1,10 @@
+{
+  "database": {
+    "default": {
+      "type": "sqlite",
+      "path": "data/db/app.db",
+      "max_connections": 1,
+      "max_page_size": 100
+    }
+  }
+}

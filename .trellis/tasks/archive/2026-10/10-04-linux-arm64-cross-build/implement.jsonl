@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/directory-structure.md","reason":"编译/运行库/Lib/资源的唯一owner和根test归属"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"显式目标错误与资源/发布清理"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"离线定向验证和资源预算"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"运行输入、签名闭包、daemon/cache与生态宿主/目标合同"}

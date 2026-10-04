@@ -1,0 +1,3 @@
+blocking_pause(millis: Int) () fails dever.time.SleepResult
+
+report_error(message: Text) () fails dever.io.WriteResult

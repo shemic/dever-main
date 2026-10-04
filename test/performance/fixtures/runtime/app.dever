@@ -1,0 +1,132 @@
+type Parking {
+  ready: Channel<Int>
+  gate: Channel<Int>
+}
+
+sync_idle() (result: Bool) {
+  bench.ready(0)
+  port.blocking_pause(config.lifetime())
+  result = true
+}
+
+idle() () {
+  blocking(bench.ready(0))
+  bench.pause(config.lifetime())
+}
+
+async_idle() (result: Bool) {
+  idle()
+  result = true
+}
+
+identity(value: Int) (result: Int) {
+  result = value
+}
+
+task_sum(value: Int, state: Int) (result: Int) {
+  job = run(identity(value))
+  result = state + wait(job)
+}
+
+sum(value: Int, state: Int) (result: Int) {
+  result = state + value
+}
+
+task_sample(index: Int, input: Bytes) () {
+  begin = dever.time.monotonic_nanos()
+  checksum = reduce(task_sum, input, 0)
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "tasks", length(input), checksum))
+}
+
+send_byte(value: Int, output: Channel<Int>) () {
+  send(output, value)
+}
+
+produce(input: Bytes, output: Channel<Int>) () {
+  each(send_byte, input, output)
+  close(output)
+}
+
+channel_sample(index: Int, input: Bytes) () {
+  output = channel(Int, config.channel_capacity())
+  begin = dever.time.monotonic_nanos()
+  producer = run(produce(input, output))
+  checksum = reduce(sum, stream(output), 0)
+  wait(producer)
+  end = dever.time.monotonic_nanos()
+  blocking(bench.report(begin, end, "channels", length(input), checksum))
+}
+
+wait_one(value: Int, parking: Parking) () {
+  send(parking.ready, value)
+  signaled(receive(parking.gate))
+}
+
+signaled(value: Int) () {}
+
+signaled(value: null) () {
+  blocking(port.report_error("channel closed before expected signal"))
+}
+
+hold(parking: Parking) () {
+  parallel_each(wait_one, config.pending_input(), config.pending(), parking)
+}
+
+started(value: Int, ready: Channel<Int>) () {
+  signaled(receive(ready))
+}
+
+cancel_worker() () {
+  parking = Parking {
+    ready = channel(Int, config.pending())
+    gate = channel(Int, 1)
+  }
+  job = run(hold(parking))
+  each(started, config.pending_input(), parking.ready)
+  blocking(bench.ready(config.pending()))
+  bench.pause(config.idle_sample_ms())
+  begin = dever.time.monotonic_nanos()
+  stop(job)
+  end = dever.time.monotonic_nanos()
+  close(parking.ready)
+  close(parking.gate)
+  blocking(bench.report(begin, end, "cancel", config.pending(), config.pending()))
+}
+
+task_worker() () {
+  input = config.input()
+  blocking(bench.ready(0))
+  each(task_sample, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], input)
+}
+
+channel_worker() () {
+  input = config.input()
+  blocking(bench.ready(0))
+  each(channel_sample, [0, 1, 2, 3, 4, 5, 6, 7, 8, 9], input)
+}
+
+tasks() (result: Bool) {
+  task_worker()
+  result = true
+}
+
+nested_task_worker() () {
+  job = run(task_worker())
+  wait(job)
+}
+
+tasks_on_worker() (result: Bool) {
+  nested_task_worker()
+  result = true
+}
+
+channels() (result: Bool) {
+  channel_worker()
+  result = true
+}
+
+cancel() (result: Bool) {
+  cancel_worker()
+  result = true
+}

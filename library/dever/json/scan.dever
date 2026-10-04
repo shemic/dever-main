@@ -1,0 +1,442 @@
+public type Kind {
+  Scalar(value: dever.json.value.Value)
+  ObjectOpen
+  ObjectClose
+  ArrayOpen
+  ArrayClose
+  Colon
+  Comma
+}
+
+public type Token {
+  kind: Kind
+  position: Int
+}
+
+public type Result {
+  Scanned(tokens: List<Token>)
+  error Failed(position: Int, message: Text)
+}
+
+type Mode {
+  Normal
+  Word
+  String
+  Escape
+  Unicode
+  LowSlash
+  LowU
+}
+
+type State {
+  tokens: List<Token>
+  mode: Mode
+  buffer: Text
+  position: Int
+  start: Int
+  unicode: Int
+  digits: Int
+  high: Int
+  failure: Text
+  error_position: Int
+}
+
+public scan(source: Text) (tokens: List<Token>) {
+  state = reduce_until(
+    character,
+    text.split(source + " ", ""),
+    State {
+      tokens = []
+      mode = Mode.Normal
+      buffer = ""
+      position = 0
+      start = 0
+      unicode = 0
+      digits = 0
+      high = 0
+      failure = ""
+      error_position = 0
+    }
+  )
+  tokens = finish(state.failure == "", state, length(source))
+}
+
+finish(valid: false, state: State, end: Int) (tokens: List<Token>) {
+  fail(Result.Failed(state.error_position, state.failure))
+}
+
+finish(valid: true, state: State, end: Int) (tokens: List<Token>) {
+  tokens = finish_mode(state.mode, state.tokens, end)
+}
+
+finish_mode(mode: Mode.Normal, tokens: List<Token>, end: Int) (result: List<Token>) {
+  result = tokens
+}
+
+finish_mode(mode: other, tokens: List<Token>, end: Int) (result: List<Token>) {
+  fail(Result.Failed(end, "unterminated JSON string or escape"))
+}
+
+character(value: Text, state: State) (next: State, stop: Bool) {
+  next = consume(state.mode, value, state)
+  next.position = state.position + 1
+  stop = next.failure != ""
+}
+
+consume(mode: Mode.Normal, value: Text, state: State) (next: State) {
+  next = normal(value, state)
+}
+
+consume(mode: Mode.Word, value: Text, state: State) (next: State) {
+  next = word(text.contains(" \t\r\n{}[]:,\"", value), value, state)
+}
+
+consume(mode: Mode.String, value: Text, state: State) (next: State) {
+  next = string(value, state)
+}
+
+consume(mode: Mode.Escape, value: Text, state: State) (next: State) {
+  next = escape(value, state)
+}
+
+consume(mode: Mode.Unicode, value: Text, state: State) (next: State) {
+  next = unicode_digit(text.index_of("0123456789abcdef", text.lower(value)), state)
+}
+
+consume(mode: Mode.LowSlash, value: Text, state: State) (next: State) {
+  next = low_slash(value == "\\", state)
+}
+
+consume(mode: Mode.LowU, value: Text, state: State) (next: State) {
+  next = low_u(value == "u", state)
+}
+
+normal(value: "{", state: State) (next: State) {
+  next = emit(Kind.ObjectOpen, state.position, state)
+}
+
+normal(value: "}", state: State) (next: State) {
+  next = emit(Kind.ObjectClose, state.position, state)
+}
+
+normal(value: "[", state: State) (next: State) {
+  next = emit(Kind.ArrayOpen, state.position, state)
+}
+
+normal(value: "]", state: State) (next: State) {
+  next = emit(Kind.ArrayClose, state.position, state)
+}
+
+normal(value: ":", state: State) (next: State) {
+  next = emit(Kind.Colon, state.position, state)
+}
+
+normal(value: ",", state: State) (next: State) {
+  next = emit(Kind.Comma, state.position, state)
+}
+
+normal(value: "\"", state: State) (next: State) {
+  next = state
+  next.mode = Mode.String
+  next.start = state.position
+  next.buffer = ""
+}
+
+normal(value: other, state: State) (next: State) {
+  next = whitespace(text.contains(" \t\r\n", value), value, state)
+}
+
+whitespace(space: true, value: Text, state: State) (next: State) {
+  next = state
+}
+
+whitespace(space: false, value: Text, state: State) (next: State) {
+  next = state
+  next.mode = Mode.Word
+  next.start = state.position
+  next.buffer = value
+}
+
+word(ended: false, value: Text, state: State) (next: State) {
+  next = state
+  next.buffer = state.buffer + value
+}
+
+word(ended: true, value: Text, state: State) (next: State) {
+  finished = atom(state.buffer, state)
+  next = after_word(finished.failure == "", value, finished)
+}
+
+after_word(valid: true, value: Text, state: State) (next: State) {
+  next = normal(value, state)
+}
+
+after_word(valid: false, value: Text, state: State) (next: State) {
+  next = state
+}
+
+atom(raw: "true", state: State) (next: State) {
+  next = scalar(dever.json.value.Value.Boolean(true), state)
+}
+
+atom(raw: "false", state: State) (next: State) {
+  next = scalar(dever.json.value.Value.Boolean(false), state)
+}
+
+atom(raw: "null", state: State) (next: State) {
+  next = scalar(dever.json.value.Value.Null, state)
+}
+
+atom(raw: other, state: State) (next: State) {
+  next = number(dever.json.number.valid(raw), raw, state)
+}
+
+number(valid: true, raw: Text, state: State) (next: State) {
+  next = scalar(dever.json.value.Value.Number(raw), state)
+}
+
+number(valid: false, raw: Text, state: State) (next: State) {
+  next = invalid_state(state.start, "invalid JSON literal or number", state)
+}
+
+scalar(value: dever.json.value.Value, state: State) (next: State) {
+  next = emit(Kind.Scalar(value), state.start, state)
+  next.mode = Mode.Normal
+}
+
+emit(kind: Kind, position: Int, state: State) (next: State) {
+  next = state
+  next.tokens = append(
+    state.tokens,
+    Token {
+      kind = kind
+      position = position
+    }
+  )
+}
+
+invalid_state(position: Int, message: Text, state: State) (next: State) {
+  next = state
+  next.failure = message
+  next.error_position = position
+}
+
+string(value: "\"", state: State) (next: State) {
+  next = scalar(dever.json.value.Value.String(state.buffer), state)
+}
+
+string(value: "\\", state: State) (next: State) {
+  next = state
+  next.mode = Mode.Escape
+}
+
+string(value: other, state: State) (next: State) {
+  next = string_character(text.codepoint(value), value, state)
+}
+
+string_character(code: Int, value: Text, state: State) (next: State) {
+  next = string_control(code < 32, value, state)
+}
+
+string_character(code: null, value: Text, state: State) (next: State) {
+  next = invalid_state(state.position, "invalid Unicode character", state)
+}
+
+string_control(control: true, value: Text, state: State) (next: State) {
+  next = invalid_state(state.position, "unescaped control character in JSON string", state)
+}
+
+string_control(control: false, value: Text, state: State) (next: State) {
+  next = decoded(value, state)
+}
+
+decoded(value: Text, state: State) (next: State) {
+  next = state
+  next.buffer = state.buffer + value
+  next.mode = Mode.String
+}
+
+escape(value: "\"", state: State) (next: State) {
+  next = decoded("\"", state)
+}
+
+escape(value: "\\", state: State) (next: State) {
+  next = decoded("\\", state)
+}
+
+escape(value: "/", state: State) (next: State) {
+  next = decoded("/", state)
+}
+
+escape(value: "b", state: State) (next: State) {
+  next = decoded("\u{8}", state)
+}
+
+escape(value: "f", state: State) (next: State) {
+  next = decoded("\u{c}", state)
+}
+
+escape(value: "n", state: State) (next: State) {
+  next = decoded("\n", state)
+}
+
+escape(value: "r", state: State) (next: State) {
+  next = decoded("\r", state)
+}
+
+escape(value: "t", state: State) (next: State) {
+  next = decoded("\t", state)
+}
+
+escape(value: "u", state: State) (next: State) {
+  next = state
+  next.mode = Mode.Unicode
+  next.unicode = 0
+  next.digits = 0
+}
+
+escape(value: other, state: State) (next: State) {
+  next = invalid_state(state.position, "invalid JSON string escape", state)
+}
+
+unicode_digit(digit: null, state: State) (next: State) {
+  next = invalid_state(state.position, "expected four hexadecimal escape digits", state)
+}
+
+unicode_digit(digit: Int, state: State) (next: State) {
+  advanced = state
+  advanced.unicode = state.unicode * 16 + digit
+  advanced.digits = state.digits + 1
+  next = unicode_ready(advanced.digits == 4, advanced)
+}
+
+unicode_ready(ready: false, state: State) (next: State) {
+  next = state
+}
+
+unicode_ready(ready: true, state: State) (next: State) {
+  next = unicode_unit(state.high == 0, state.unicode, state)
+}
+
+unicode_unit(first: true, code: Int, state: State) (next: State) {
+  next = first_unit(code, state)
+}
+
+unicode_unit(first: false, code: Int, state: State) (next: State) {
+  next = second_unit(code >= 56320 and code <= 57343, code, state)
+}
+
+first_unit(code: Int >= 55296 and <= 56319, state: State) (next: State) {
+  next = state
+  next.high = code
+  next.mode = Mode.LowSlash
+}
+
+first_unit(code: Int >= 56320 and <= 57343, state: State) (next: State) {
+  next = invalid_state(state.position, "unpaired low Unicode surrogate", state)
+}
+
+first_unit(code: other, state: State) (next: State) {
+  next = scalar_character(text.from_codepoint(code), state)
+}
+
+second_unit(valid: false, code: Int, state: State) (next: State) {
+  next = invalid_state(state.position, "expected a low Unicode surrogate", state)
+}
+
+second_unit(valid: true, code: Int, state: State) (next: State) {
+  next = scalar_character(
+    text.from_codepoint(65536 + (state.high - 55296) * 1024 + code - 56320),
+    state
+  )
+}
+
+scalar_character(value: Text, state: State) (next: State) {
+  next = decoded(value, state)
+  next.high = 0
+}
+
+scalar_character(value: null, state: State) (next: State) {
+  next = invalid_state(state.position, "invalid Unicode scalar", state)
+}
+
+low_slash(valid: true, state: State) (next: State) {
+  next = state
+  next.mode = Mode.LowU
+}
+
+low_slash(valid: false, state: State) (next: State) {
+  next = invalid_state(state.position, "expected a low Unicode surrogate escape", state)
+}
+
+low_u(valid: true, state: State) (next: State) {
+  next = escape("u", state)
+}
+
+low_u(valid: false, state: State) (next: State) {
+  next = invalid_state(state.position, "expected a low Unicode surrogate escape", state)
+}
+
+public quote(value: Text) (result: Text) {
+  result = "\"" + text.join(each(quoted_character, text.split(value, "")), "") + "\""
+}
+
+quoted_character(value: "\"") (result: Text) {
+  result = "\\\""
+}
+
+quoted_character(value: "\\") (result: Text) {
+  result = "\\\\"
+}
+
+quoted_character(value: "\u{8}") (result: Text) {
+  result = "\\b"
+}
+
+quoted_character(value: "\u{c}") (result: Text) {
+  result = "\\f"
+}
+
+quoted_character(value: "\n") (result: Text) {
+  result = "\\n"
+}
+
+quoted_character(value: "\r") (result: Text) {
+  result = "\\r"
+}
+
+quoted_character(value: "\t") (result: Text) {
+  result = "\\t"
+}
+
+quoted_character(value: other) (result: Text) {
+  result = quoted_code(text.codepoint(value), value)
+}
+
+quoted_code(code: Int, value: Text) (result: Text) {
+  result = quote_control(code < 32, code, value)
+}
+
+quoted_code(code: null, value: Text) (result: Text) {
+  result = value
+}
+
+quote_control(control: false, code: Int, value: Text) (result: Text) {
+  result = value
+}
+
+quote_control(control: true, code: Int, value: Text) (result: Text) {
+  result = "\\u00" + hex_digit(code // 16) + hex_digit(code % 16)
+}
+
+hex_digit(value: Int) (result: Text) {
+  result = hex_character(text.at("0123456789abcdef", value))
+}
+
+hex_character(value: Text) (result: Text) {
+  result = value
+}
+
+hex_character(value: null) (result: Text) {
+  result = ""
+}

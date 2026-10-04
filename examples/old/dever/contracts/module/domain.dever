@@ -1,0 +1,19 @@
+
+public type Port {
+  value: Int >= 1 and <= 65535
+}
+
+public type PortResult {
+  Ready(port: Port)
+  error Failed(message: Text)
+}
+
+public port(value: Int >= 1 and <= 65535) (port: Port) pure {
+  port = Port {
+    value = value
+  }
+}
+
+public port(value: other) (port: Port) pure {
+  fail(PortResult.Failed("port must be between 1 and 65535"))
+}

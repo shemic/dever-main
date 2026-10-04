@@ -1,0 +1,18 @@
+
+main() (configured: domain.Port, invalid: domain.PortResult, fallback: domain.Port) pure {
+  configured = domain.Port {
+    value = 8080
+  }
+  invalid = result(domain.port(0))
+  fallback = configured_or_default(result(domain.port(-1)))
+}
+
+configured_or_default(result: domain.PortResult.Ready(port)) (value: domain.Port) pure recover("optional local configuration uses port 8080") {
+  value = port
+}
+
+configured_or_default(result: domain.PortResult.Failed(message)) (value: domain.Port) pure recover("optional local configuration uses port 8080") {
+  value = domain.Port {
+    value = 8080
+  }
+}

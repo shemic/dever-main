@@ -1,0 +1,41 @@
+type TenantView {
+  id: model.id
+  key: Text
+  name: Text
+}
+
+provision(key: Text, name: Text) (tenant: TenantView) {
+  stored = model.create(
+    {
+      key = domain.normalize_key(key)
+      name = domain.normalize_name(name)
+    }
+  )
+  tenant = TenantView {
+    id = stored.id
+    key = stored.key
+    name = stored.name
+  }
+}
+
+active(tenant_key: Text) (tenant: TenantView) {
+  stored = model.first(
+    {
+      where = key == domain.normalize_key(tenant_key)
+    }
+  )
+  tenant = active_view(stored)
+}
+
+active_view(stored: model.Tenant) (tenant: TenantView) {
+  domain.require_active(stored.status == model.TenantStatus.Active)
+  tenant = TenantView {
+    id = stored.id
+    key = stored.key
+    name = stored.name
+  }
+}
+
+active_view(stored: null) (tenant: TenantView) {
+  fail(dever.api.Error.Unauthorized)
+}

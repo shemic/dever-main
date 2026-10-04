@@ -1,0 +1,12 @@
+type ScheduleStatus {
+  Pending = "待发布"
+  Completed = "已完成"
+  Cancelled = "已取消"
+}
+
+type Schedule {
+  uuid: Uuid generated unique
+  article_id: news.article.model.id unique
+  publish_at: DateTime index
+  status: ScheduleStatus default ScheduleStatus.Pending index
+}

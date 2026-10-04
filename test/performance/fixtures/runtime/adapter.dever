@@ -1,0 +1,7 @@
+port.blocking_pause(millis: Int) () {
+  dever.time.sleep(millis)
+}
+
+port.report_error(message: Text) () {
+  dever.io.println("ERROR|" + message)
+}

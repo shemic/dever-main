@@ -1,0 +1,9 @@
+# 预期 C009：缺少 false 分句。补齐后才能覆盖全部 Bool 输入。
+
+label(enabled: true) (text: Text) {
+  text = "enabled"
+}
+
+main() (text: Text) {
+  text = label(true)
+}

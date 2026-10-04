@@ -1,0 +1,28 @@
+{
+  "id": "application-testing",
+  "name": "application-testing",
+  "title": "Dever 应用测试体系",
+  "description": "为 Dever 应用建立根 test 目录、dever test 命令、类型安全断言、隔离 fixture 与可重复执行合同",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "Antigravity",
+  "assignee": "Antigravity",
+  "createdAt": "2026-09-19",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [],
+  "parent": "09-04-dever-language-mvp",
+  "relatedFiles": [],
+  "notes": "",
+  "meta": {
+    "execution_mode": "inline"
+  }
+}

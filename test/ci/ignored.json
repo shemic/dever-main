@@ -1,0 +1,1738 @@
+[
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "unprivileged_launcher_probe",
+    "reason": "internal non-root launcher probe, invoked by enforces_unprivileged_namespace",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/trusted_helper.rs",
+    "name": "rejects_untrusted_helper_paths_bytes_modes_owners_and_capabilities",
+    "reason": "requires root and the prepared static author bwrap; touches only owned target files",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "dever_sandbox"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "canonical_c_header_links_and_executes_the_real_runtime_archive",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "llvm_object_calls_the_versioned_runtime_abi_without_rust_layouts",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "protocol_poll_rejects_invalid_output_before_advancing_the_operation",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "logger_flush_is_a_stable_native_allocation_barrier",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "wire_codecs_validate_slots_before_callback_and_release_partial_values",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/native_runtime_link.rs",
+    "name": "database_abi_preserves_typed_owners_and_rejects_invalid_slots_without_io",
+    "reason": "build a runtime-sqlite or runtime-postgres staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "native_runtime_link"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "unicode_text_nullable_results_and_aliases_execute_and_release",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "decimal_numbers_parsing_rendering_and_ieee_intrinsics_execute",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "nested_records_choices_nullable_and_field_overwrites_keep_value_semantics",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "list_map_cow_order_and_supported_map_keys_execute",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "static_handler_traversals_and_bytes_execute_without_interpreting_values",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "nullable_elements_flatten_and_unit_handlers_and_owned_reduce_state_release",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "traversal_failure_cleans_managed_arguments_results_and_error_paths",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "dynamic_map_duplicate_key_preserves_runtime_diagnostic_and_releases_it",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_managed_native.rs",
+    "name": "root_owned_outputs_are_transferred_and_released_by_the_caller",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_managed_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "direct_failure_and_single_success_capture",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "zero_and_multiple_outputs_capture_in_order",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "wrapped_and_explicit_outer_failures_keep_nominal_identity",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "static_handler_failures_release_cursors_context_and_state",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "root_failure_retains_business_code_owned_payload_and_call_chain",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "nested_owned_failure_payload_keeps_cow_aliases_independent",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "captured_success_transfers_owned_root_output",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "capture_does_not_consume_dynamic_numeric_faults",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "capture_does_not_consume_original_runtime_abi_faults",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "bytes_results_decode_unicode_and_keep_aliases",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_result_native.rs",
+    "name": "bytes_failures_keep_original_messages",
+    "reason": "requires explicit target/native-runtime-abi staticlib",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_result_native"
+  },
+  {
+    "source": "test/llvm_api_security_cases.rs",
+    "name": "private_rest_isolates_tenants_roles_identity_and_transactions",
+    "reason": "requires explicit runtime-api/sqlite archive; uses only owned loopback and two owned tenant files",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_security_cases.rs",
+    "name": "postgres_private_rest_uses_the_same_identity_permission_and_transaction_contract",
+    "reason": "requires explicit PostgreSQL fixture in config/setting.json; owns control and two tenant databases",
+    "stage": "postgres",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_security_cases.rs",
+    "name": "disabled_component_cannot_be_bypassed_by_tenant_owner",
+    "reason": "requires explicit runtime-api/sqlite archive; owns all listener, component and tenant state",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_crud_defaults_owned_rows_and_repeat_entry",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_bulk_upsert_and_static_predicates",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_nullable_equality_keeps_present_and_absent_binds",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_cursor_ties_nullable_next_and_offset_page",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_persistent_scalars_choices_and_private_fields_round_trip",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_nested_transactions_share_the_one_connection",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_row_stream_full_early_stop_and_close_release_connections",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_static_sql_typed_optional_list_and_record_results",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_captured_nested_database_faults_keep_exact_categories",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_task_wait_keeps_database_failure_identity",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_numeric_fault_rolls_back_before_the_next_entry",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_command_encoding_failure_rolls_back_before_retry",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_uncaught_constraint_rolls_back_before_the_next_command",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_sequential_database_handler_inherits_transaction_context",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_seed_history_is_reused_without_overwriting_business_rows",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_empty_create_many_retains_valid_generated_defaults",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_related_cycles_join_batch_and_unloaded_values",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_schema_upgrade_preserves_rows_and_replays_migration_and_seed_once",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "sqlite_cancelled_row_stream_drains_before_single_connection_fallback",
+    "reason": "requires explicitly prepared database runtime archive; owned SQLite only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "postgres_checked_models_transactions_streams_and_schema_upgrade",
+    "reason": "requires configured isolated database.postgres_test and an explicit database runtime archive",
+    "stage": "postgres",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "postgres_command_encoding_failure_rolls_back_before_retry",
+    "reason": "requires configured isolated database.postgres_test and an explicit database runtime archive",
+    "stage": "postgres",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_database_source.rs",
+    "name": "postgres_uncaught_constraint_rolls_back_before_the_next_command",
+    "reason": "requires configured isolated database.postgres_test and an explicit database runtime archive",
+    "stage": "postgres",
+    "package": "dever-backend-bridge",
+    "target": "llvm_database_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "nullable_memory_streams_early_stop_and_alias_close",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "channel_stream_backpressure_with_suspending_handler",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "ticks_suspend_then_early_stop_closes_aliases",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "parallel_stream_and_memory_workers_preserve_all_values",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "parallel_stream_preserves_typed_owned_worker_failure",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "parallel_failure_interrupts_idle_producer_and_preserves_channel_alias",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "synchronous_parallel_memory_dispatch_preserves_failure_and_ownership",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "async_parallel_dispatch_supports_non_suspending_handlers",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "synchronous_file_stream_parallel_failure_releases_workers_and_rows",
+    "reason": "requires explicit runtime-abi archive and owned temporary file",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "timeout_preserves_owned_multi_output_and_some_null",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "race_preserves_owned_multi_output_and_drains_losers",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "zero_output_timeout_and_race_preserve_presence_and_cleanup",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "timeout_and_race_propagate_business_failure_without_fallback",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "tcp_read_write_eof_and_shared_resource_close",
+    "reason": "requires explicit runtime-abi archive and owned loopback sockets",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "tcp_chunks_collects_exact_bytes_across_short_reads_and_eof",
+    "reason": "requires explicit runtime-abi archive and owned loopback sockets",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "invalid_network_inputs_preserve_original_failure_messages",
+    "reason": "requires explicit runtime-abi archive and owned loopback sockets",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "chunks_and_connections_emit_one_terminal_failure_before_end",
+    "reason": "requires explicit runtime-abi archive and owned loopback sockets",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "timeout_drains_pending_descendant_socket_before_fallback_returns",
+    "reason": "requires explicit runtime-abi archive and owned loopback sockets",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "zero_ticks_is_an_original_uncaptured_runtime_fault",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "zero_task_timeout_is_an_original_uncaptured_runtime_fault",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_stream_network_source.rs",
+    "name": "timeout_and_race_keep_numeric_fault_kind_and_origin",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_stream_network_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "pure_suite_reports_source_failures_without_loading_deployment_settings",
+    "reason": "requires explicit runtime archive; bounded native ownership checks",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "jobs_use_case_fakes_clock_retry_cron_and_atomic_transactions",
+    "reason": "requires explicit runtime archive; isolated SQLite and no production Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "suite_keeps_blocking_and_async_fakes_separate",
+    "reason": "requires explicit runtime archive; case-local Port effects and no external Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "job_dispatch_blocks_incompatible_schema_payload_and_policy",
+    "reason": "requires explicit runtime archive; inspect only this suite's persisted queue",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "command_enqueues_system_jobs_and_releases_repeated_application_roots",
+    "reason": "requires explicit runtime archive; CMD enters System scope without running worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "invalid_worker_policy_fails_before_creating_database",
+    "reason": "requires explicit runtime archive; invalid worker policy must fail before schema I/O",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_job_test_source.rs",
+    "name": "timed_out_job_drains_children_and_rolls_back_before_retry",
+    "reason": "requires explicit runtime archive; bounded task cancellation inside owned SQLite transactions",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_job_test_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "named_async_call_preserves_nested_managed_output",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "cloned_channel_fields_survive_their_source_scope",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "task_wait_and_capacity_one_group_preserve_order",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "nullable_channel_backpressure_close_and_drain",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "task_business_failure_preserves_owned_payload",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "stop_task_group_and_nested_descendants_release_frames",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "blocking_and_parallel_return_checked_values",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "capture_then_refail_preserves_owned_history",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "runtime_fault_is_not_captured_as_business_failure",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "blocking_sync_call_propagates_typed_runtime_fault",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "blocking_abi_fault_keeps_original_buffer_and_is_not_captured",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "async_static_handlers_preserve_traversal_state",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "synchronous_task_multi_output_and_group_unit",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "blocking_and_parallel_preserve_owned_inputs_and_outputs",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "blocking_and_parallel_preserve_typed_business_failure",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "negative_task_sleep_keeps_runtime_message",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "synchronous_channel_only_root_releases_aliases",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_async_source.rs",
+    "name": "default_failure_retains_origin_callers_and_owned_payload",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "worker_success_and_declared_failure_survive_repeated_roots",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "typed_nested_values_and_multiple_outputs_round_trip",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "malformed_output_and_business_error_payloads_are_runtime_faults",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "handshake_and_setting_failures_do_not_leak_a_worker",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "cancelling_a_call_preserves_the_shared_worker",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_external_source.rs",
+    "name": "independent_executables_use_verified_embedded_exec_and_managed_launches",
+    "reason": "requires explicit runtime-external archive and existing fixture Worker",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_external_source"
+  },
+  {
+    "source": "test/llvm_job_security_cases.rs",
+    "name": "queued_users_recheck_roles_sessions_catalog_and_tenant_components",
+    "reason": "requires explicit runtime archive; owned loopback API/worker and two tenant SQLite databases",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_async_native.rs",
+    "name": "switched_resume_coroutine_suspends_resumes_and_destroys",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_native"
+  },
+  {
+    "source": "test/llvm_async_native.rs",
+    "name": "async_operations_preserve_scope_and_backpressure",
+    "reason": "build runtime-abi-only staticlib in target/native-runtime-abi before running",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_async_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "read_eof_and_alias_close_preserve_business_error_identity",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "stream_aliases_share_progress_and_early_close",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "terminal_read_failure_is_one_event_then_end",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "reduce_until_retains_the_shared_unvisited_cursor",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "owned_file_output_and_stream_release_do_not_leak",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "create_new_and_write_never_overwrite_existing_content",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "runtime_fault_unwinds_owned_file_and_partly_read_stream",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "each_propagates_owned_business_failure_and_releases_its_cursor",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_resource_native.rs",
+    "name": "resource_c_abi_rejects_invalid_outputs_before_io_or_cursor_progress",
+    "reason": "requires the explicitly prepared runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_resource_native"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "runtime_rejects_missing_authentication_before_serving",
+    "reason": "requires explicit runtime-api archive; invalid descriptor must not bind a listener",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "failed_listener_start_drains_application_resources",
+    "reason": "requires explicit runtime-api archive; occupied listener belongs to this test only",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "log_only_cmd_uses_configured_owner_and_flushes_before_return",
+    "reason": "requires explicit runtime-api archive; reads only owned setting.json and captured stderr",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "mixed_http_application_dispatches_cmd_without_binding_http",
+    "reason": "requires explicit runtime-api archive; does not start a listener",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "public_http_inputs_context_errors_and_repeated_roots_release_owners",
+    "reason": "requires explicit runtime-api archive; starts only test-owned loopback services",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_api_source.rs",
+    "name": "upload_adapter_store_and_failed_input_release_affine_owners",
+    "reason": "requires explicit runtime-api archive; owns listener, upload files and storage outputs",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_api_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "single_http_request_preserves_headers_body_and_status",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "pooled_http_requests_and_stream_upload_download",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "pooled_http2_requests_and_stream_upload_download",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "tls_verifies_local_certificate_and_streams_http",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "tls_negotiates_http2_and_streams_upload_download",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "live_reply_respond_preserves_response",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "live_reply_start_write_finish_preserves_chunks",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "sse_preserves_nullable_metadata_and_multiline_data",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "owned_handler_failure_is_a_500_then_service_continues",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "static_suspending_handler_clones_owned_context_before_initial_suspend",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "websocket_connect_echoes_text_binary_and_natural_end",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "websocket_url_open_echoes_text_binary_and_natural_end",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "secure_websocket_uses_local_tls_trust",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "websocket_message_stream_keeps_all_typed_variants_and_closes_aliases",
+    "reason": "requires explicit runtime-abi archive and owned loopback",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "calendar_duration_and_clocks_keep_runtime_semantics",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "uuid_parse_null_and_canonical_text",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "crypto_secret_alias_sha256_hmac_and_comparison",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "recoverable_system_errors_keep_the_original_messages",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "password_hash_verify_uses_the_existing_blocking_boundary",
+    "reason": "requires explicit runtime-abi archive and bounded crypto workers",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "process_arguments_exclude_executable_and_keep_unicode",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "stdout_and_structured_logs_are_flushed_before_native_return",
+    "reason": "requires explicit runtime-abi archive",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "http_client_matches_independent_chunked_wire_and_repeated_headers",
+    "reason": "requires explicit runtime-abi archive and independent owned loopback peer",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_http_system_source.rs",
+    "name": "invalid_server_limits_are_an_uncaptured_original_runtime_fault",
+    "reason": "requires explicit runtime-abi archive and owned loopback listener",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_http_system_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_owned_record_list_unicode_and_missing_nullable",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_scalar_codecs_preserve_existing_wire_formats",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_owned_inputs_survive_the_initial_suspend",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_input_errors_release_partially_decoded_owners",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_argument_errors_do_not_run_app",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "port_selects_only_the_configured_adapter_and_releases_settings",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "selected_adapter_invalid_setting_fails_closed",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_keeps_typed_business_faults_and_explicit_recovery",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_numeric_fault_is_not_reclassified_as_input_or_business_error",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_preserves_native_input_diagnostics_and_validation_order",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "selected_setting_diagnostic_is_redacted_after_partial_secret_decode",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "cmd_top_level_nullable_missing_null_and_owned_present",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "single_unconfigured_adapter_needs_no_setting_file",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "task_reads_selected_setting_within_the_application_scope",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/llvm_application_source.rs",
+    "name": "later_adapter_initialization_failure_releases_earlier_settings_and_gate",
+    "reason": "requires explicitly prepared runtime-only archive; no database or service",
+    "stage": "native",
+    "package": "dever-backend-bridge",
+    "target": "llvm_application_source"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "enforces_files_network_process_and_threads",
+    "reason": "requires explicitly prepared target/sandbox-inputs assets; owns only test processes",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "pins_grants_against_directory_replacement",
+    "reason": "requires explicitly prepared sandbox assets; mutates only owned fixture paths",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "pinned_grant_probe",
+    "reason": "internal sandbox descriptor-pinning probe",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "rejects_writable_aliases_of_executable_inputs",
+    "reason": "requires explicitly prepared sandbox assets",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "prepared_python_and_node_run_without_host_files_or_process_creation",
+    "reason": "requires explicitly prepared signed-release Python/Node inputs and sandbox assets",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "enforces_unprivileged_namespace",
+    "reason": "requires explicitly prepared assets and host permission for unprivileged user namespaces",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "restricted_probe",
+    "reason": "internal sandbox probe, invoked only inside an owned namespace",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "terminates_detached_descendants_on_kill",
+    "reason": "requires explicitly prepared assets; kills only this test's namespace",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "tree_probe",
+    "reason": "internal sandbox process-tree probe",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "descendant_probe",
+    "reason": "internal sandbox descendant probe",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "granted_probe",
+    "reason": "internal sandbox probe, invoked only inside an owned namespace",
+    "stage": "probe",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "rejects_missing_dependency_before_host_loader_can_supply_it",
+    "reason": "requires explicitly prepared target/sandbox-inputs assets",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-sandbox-tests/isolation.rs",
+    "name": "kernel_rejects_namespace_ptrace_and_truncated_ioctl_requests",
+    "reason": "requires explicit assets and the prepared C syscall probe",
+    "stage": "sandbox",
+    "package": "dever-sandbox",
+    "target": "isolation"
+  },
+  {
+    "source": "test/dever-cli-tests/llvm_cli.rs",
+    "name": "default_llvm_runs_builds_moves_and_reuses_cache_without_host_toolchain",
+    "reason": "requires explicitly prepared full runtime archive and Linux CRT files; serial offline CLI execution",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "llvm_cli"
+  },
+  {
+    "source": "test/dever-cli-tests/llvm_cli.rs",
+    "name": "unsigned_llvm_run_and_build_reject_exec_workers",
+    "reason": "requires explicitly prepared runtime archive and component-fixture; no downloads or language SDK",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "llvm_cli"
+  },
+  {
+    "source": "test/dever-cli-tests/llvm_cli.rs",
+    "name": "llvm_test_preserves_case_isolation_fakes_and_failure_continuation",
+    "reason": "requires explicitly prepared full runtime archive; isolated SQLite and case-local fake processes",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "llvm_cli"
+  },
+  {
+    "source": "test/dever-cli-tests/packages.rs",
+    "name": "installed_managed_package_worker_guard",
+    "reason": "run only from the signed private fixture",
+    "stage": "probe",
+    "package": "dever-cli",
+    "target": "packages"
+  },
+  {
+    "source": "test/dever-cli-tests/packages.rs",
+    "name": "installed_package_passes_check_test_run_build_and_standalone_execution",
+    "reason": "requires explicitly prepared native runtime archive and owned daemon",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "packages"
+  },
+  {
+    "source": "test/dever-cli-tests/shared_toolchain.rs",
+    "name": "deverd_uses_kernel_credentials_for_other_machine_users",
+    "reason": "requires root; drops only owned test clients to an unprivileged uid",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "shared_toolchain"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "compiles_go_worker_with_locked_tools_and_runs_without_source_or_go",
+    "reason": "requires explicit Go runtime pack, official UUID proof/archive and sandbox assets",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "runs_official_native_python_wheel_in_sandbox",
+    "reason": "requires the explicit official native-wheel and complete Python runtime fixture at target/python-managed",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "runs_official_python_source_build_in_sandbox",
+    "reason": "requires explicitly prepared official PEP517 source build at target/source-build",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "runs_javascript_runner_from_explicit_fixture_runtime_path",
+    "reason": "requires the explicit host Node fixture path",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "runs_python_runner_from_explicit_fixture_runtime_path",
+    "reason": "requires the explicit host Python fixture path",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "binds_commonjs_exports_without_a_registration_table",
+    "reason": "requires the explicit host Node fixture path",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "binds_esm_exports_without_a_registration_table",
+    "reason": "requires the explicit host Node fixture path",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "imports_packaged_sdk_before_adapter_modules",
+    "reason": "requires the explicit host Python fixture path",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers.rs",
+    "name": "compiled_managed_worker_runs_after_source_and_pack_are_removed",
+    "reason": "requires the explicit host Node fixture and native Rust compiler",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-tests/tests/postgres_api.rs",
+    "name": "postgres_cms_http_isolates_two_tenant_databases",
+    "reason": "requires an isolated PostgreSQL instance configured in config/setting.json",
+    "stage": "postgres",
+    "package": "dever-tests",
+    "target": "postgres_api"
+  },
+  {
+    "source": "test/dever-tests/tests/native_cache.rs",
+    "name": "actual_cli_checks_baseline_on_check_run_and_cached_build",
+    "reason": "requires a freshly built local dever-cli binary",
+    "stage": "native",
+    "package": "dever-tests",
+    "target": "native_cache"
+  },
+  {
+    "source": "test/dever-tests/tests/postgres_orm.rs",
+    "name": "postgres_orm_uses_the_configured_isolated_database",
+    "reason": "requires an isolated database configured in config/setting.json",
+    "stage": "postgres",
+    "package": "dever-tests",
+    "target": "postgres_orm"
+  },
+  {
+    "source": "test/dever-tests/tests/external_resources.rs",
+    "name": "packaged_exec_runs_without_source_worker_or_inherited_environment",
+    "reason": "requires explicitly prepared sandbox assets and the private Rust bootstrap compiler",
+    "stage": "native",
+    "package": "dever-tests",
+    "target": "external_resources"
+  },
+  {
+    "source": "test/dever-tests/tests/performance.rs",
+    "name": "allocation_sensitive_source_scenarios",
+    "reason": "explicit bounded record/list/JSON/large-map benchmark",
+    "stage": "bounded-perf",
+    "package": "dever-tests",
+    "target": "performance"
+  },
+  {
+    "source": "test/dever-tests/tests/performance.rs",
+    "name": "native_hot_paths_stay_within_the_matching_runtime_baseline",
+    "reason": "explicit bounded native hot-path benchmark; never part of default checks",
+    "stage": "bounded-perf",
+    "package": "dever-tests",
+    "target": "performance"
+  },
+  {
+    "source": "test/dever-tests/tests/authorization_postgres.rs",
+    "name": "postgres_authorization_preserves_site_scoped_roles_and_catalog",
+    "reason": "requires an isolated database configured in config/setting.json",
+    "stage": "postgres",
+    "package": "dever-tests",
+    "target": "authorization_postgres"
+  },
+  {
+    "source": "test/dever-tests/tests/concurrency.rs",
+    "name": "parallel_task_granularity_measurement",
+    "reason": "explicit bounded local scheduling benchmark",
+    "stage": "bounded-perf",
+    "package": "dever-tests",
+    "target": "concurrency"
+  },
+  {
+    "source": "test/dever-cli-tests/external_workers/npm.rs",
+    "name": "runs_official_npm_addon_from_offline_resources_and_threads",
+    "reason": "requires the explicit official native npm build fixture at target/npm-build",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_workers"
+  },
+  {
+    "source": "test/dever-cli-tests/packages/managed_compile.rs",
+    "name": "trusted_compilation_cache_requires_sources_and_revalidates_signed_pack",
+    "reason": "requires explicitly prepared native archive; starts an owned daemon",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "packages"
+  },
+  {
+    "source": "test/dever-cli-tests/packages/managed_compile.rs",
+    "name": "different_machine_users_share_compilation_without_private_cache",
+    "reason": "requires root and prepared archive; only owned clients change UID",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "packages"
+  },
+  {
+    "source": "test/dever-cli-tests/packages/managed_compile.rs",
+    "name": "cancellation_disconnect_and_version_lease_reap_worker_and_staging",
+    "reason": "requires prepared archive, explicit author cc/LLVM inputs; supervises an owned signed sleeper",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "packages"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/bootstrap.rs",
+    "name": "bootstrap_installer_rejects_untrusted_inputs_before_publication",
+    "reason": "root-only installer trust rejection; never touches the actual machine installation",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/bootstrap.rs",
+    "name": "bootstrap_recovery_is_idempotent_and_rejects_unrecorded_targets",
+    "reason": "root-only crash-recovery fixture; all journal targets are below an owned image root",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/ecosystem_acceptance.rs",
+    "name": "signed_ecosystems_build_and_run_without_system_language_installations",
+    "reason": "requires prepared pinned ecosystem inputs and root for owned namespace; no existing services",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/acceptance.rs",
+    "name": "signed_core_builds_without_host_compiler_libraries_or_tools",
+    "reason": "requires prepared optimized archives and root for an owned GNU ABI root",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/acceptance.rs",
+    "name": "optimized_profiles_make_reproducible_signed_release_and_run_through_daemon",
+    "reason": "requires four optimized archives and component-fixture; starts only an owned daemon, SQLite and exec Worker fixtures",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/native_release/bootstrap_acceptance.rs",
+    "name": "signed_bootstrap_installs_and_serves_two_projects_without_host_libraries",
+    "reason": "requires optimized author archives and Linux root; installs only into an owned image root",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "native_release"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/sumdb.rs",
+    "name": "prepare_official_go_dependency_fixture",
+    "reason": "author operation: explicitly fetches official Go proxy/sumdb; requires target/go-managed/config/setting.json and runtime.pack",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/build.rs",
+    "name": "prepare_source_build_tool_fixture",
+    "reason": "explicit author operation: assembles previously hashed native-build-inputs; no network or host execution",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/build.rs",
+    "name": "pep517_hooks_keep_requirements_cli_and_metadata_boundaries",
+    "reason": "isolated offline PEP517 contracts; requires explicit target/source-build tool/runtime fixture",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/build.rs",
+    "name": "builds_official_python_source_with_isolated_pep517",
+    "reason": "explicit official PyPI source build: downloads fixed source/build requirements and executes signed managed build tools",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/npm_build.rs",
+    "name": "prepare_npm_build_tool_fixture",
+    "reason": "explicit author operation: assembles hashed npm/compiler/header inputs; no network or host execution",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/npm_build.rs",
+    "name": "builds_official_npm_addon_with_locked_lifecycle",
+    "reason": "explicit official npm native source build; network only in registry resolver, never in lifecycle sandbox",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/npm_build.rs",
+    "name": "npm_lifecycle_preserves_optional_failures_bins_and_offline_remove",
+    "reason": "explicit managed npm hooks; uses local registry and real signed author runtime/tools",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/npm_build.rs",
+    "name": "npm_build_scratch_budget_kills_owned_hook_and_cleans_stage",
+    "reason": "explicit managed npm hook: sparse scratch overflow and child cleanup; no network",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/npm_build.rs",
+    "name": "npm_build_output_hard_links_stay_inside_the_exported_tree",
+    "reason": "explicit managed npm hook: internal output aliases are flattened; aliases outside output are rejected",
+    "stage": "native",
+    "package": "dever-cli",
+    "target": "external_libs"
+  },
+  {
+    "source": "test/dever-cli-tests/external_libs/wheel.rs",
+    "name": "prepare_official_native_python_fixture",
+    "reason": "author operation: explicitly fetches PyPI simplejson; requires target/python-managed/config/setting.json and runtime.pack",
+    "stage": "author",
+    "package": "dever-cli",
+    "target": "external_libs"
+  }
+]

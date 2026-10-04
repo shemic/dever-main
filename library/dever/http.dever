@@ -1,0 +1,262 @@
+public type PoolLimits {
+  idle_ms: Int
+  chunk_bytes: Int
+  read_ms: Int
+}
+
+public type StreamRequest {
+  method: Text
+  target: Text
+  headers: List<Header>
+  body: AsyncStream<dever.io.ReadEvent>
+}
+
+public type StreamResponse {
+  status: Int
+  headers: List<Header>
+  body: AsyncStream<dever.io.ReadEvent>
+}
+
+public type ClientResult {
+  Ready(client: dever.system.HttpClient)
+  error Failed(message: Text)
+}
+
+public type StreamResponseResult {
+  Read(response: StreamResponse)
+  error Failed(message: Text)
+}
+
+public default_pool_limits() (result: PoolLimits) {
+  result = PoolLimits {
+    idle_ms = 10000
+    chunk_bytes = 65536
+    read_ms = 60000
+  }
+}
+
+public client(
+  origin: Text,
+  tls: dever.system.ClientTls,
+  limits: Limits,
+  pool: PoolLimits
+) (client: dever.system.HttpClient) {
+  client = ready_client(dever.system.http_client(origin, tls, limits, pool))
+}
+
+ready_client(result: ClientResult.Ready(client)) (value: dever.system.HttpClient) {
+  value = client
+}
+
+ready_client(result: ClientResult.Failed(message)) (value: dever.system.HttpClient) {
+  fail(ClientResult.Failed(message))
+}
+
+public request(client: dever.system.HttpClient, request: Request) (
+  response: Response
+) {
+  response = read_response(dever.system.http_request(client, request))
+}
+
+public open(client: dever.system.HttpClient, request: Request) (
+  response: StreamResponse
+) {
+  response = read_stream_response(dever.system.http_open(client, request))
+}
+
+public open_stream(client: dever.system.HttpClient, request: StreamRequest) (
+  response: StreamResponse
+) {
+  response = read_stream_response(dever.system.http_open_stream(client, request))
+}
+
+read_stream_response(result: StreamResponseResult.Read(response)) (
+  value: StreamResponse
+) {
+  value = response
+}
+
+read_stream_response(result: StreamResponseResult.Failed(message)) (
+  value: StreamResponse
+) {
+  fail(StreamResponseResult.Failed(message))
+}
+
+public close_client(client: dever.system.HttpClient) () {
+  closed(dever.system.http_close_client(client))
+}
+
+public serve_tls(
+  route: handler(request: Request) (response: Response),
+  listener: dever.system.Listener,
+  limits: Limits,
+  tls: dever.system.ServerTls
+) () {
+  dever.system.http_serve_tls(route, listener, limits, tls)
+}
+
+public serve_live_tls(
+  route: handler(request: Request, reply: dever.system.HttpReply) (),
+  listener: dever.system.Listener,
+  limits: Limits,
+  live: LiveLimits,
+  tls: dever.system.ServerTls
+) () {
+  dever.system.http_serve_live_tls(route, listener, limits, live, tls)
+}
+
+public type Header {
+  name: Text
+  value: Bytes
+}
+
+public type Request {
+  method: Text
+  target: Text
+  headers: List<Header>
+  body: Bytes
+}
+
+public type Response {
+  status: Int
+  headers: List<Header>
+  body: Bytes
+}
+
+public type Limits {
+  header_bytes: Int
+  body_bytes: Int
+  timeout_ms: Int
+  connections: Int
+  http2: Http2Limits?
+}
+
+# streams 为每连接并发流数；窗口限制协议层未消费的接收正文。
+public type Http2Limits {
+  streams: Int
+  stream_window_bytes: Int
+  connection_window_bytes: Int
+}
+
+public default_http2_limits() (result: Http2Limits) {
+  result = Http2Limits {
+    streams = 16
+    stream_window_bytes = 65535
+    connection_window_bytes = 262144
+  }
+}
+
+public type LiveLimits {
+  chunk_bytes: Int
+  idle_ms: Int
+  heartbeat_ms: Int
+}
+
+public default_live_limits() (result: LiveLimits) {
+  result = LiveLimits {
+    chunk_bytes = 65536
+    idle_ms = 60000
+    heartbeat_ms = 15000
+  }
+}
+
+public type ResponseResult {
+  Read(response: Response)
+  error Failed(message: Text)
+}
+
+public default_limits() (result: Limits) {
+  result = Limits {
+    header_bytes = 8192
+    body_bytes = 1048576
+    timeout_ms = 5000
+    connections = 32
+    http2 = null
+  }
+}
+
+public header(name: Text, value: Text) (result: Header) {
+  result = Header {
+    name = text.lower(name)
+    value = dever.bytes.from_text(value)
+  }
+}
+
+# 返回第一个匹配项的原始值；重复头保留在 headers 列表中。
+public header_value(headers: List<Header>, name: Text) (value: Bytes?) {
+  value = found_header(find(named_header, headers, text.lower(name)))
+}
+
+named_header(header: Header, name: Text) (matches: Bool) {
+  matches = text.lower(header.name) == name
+}
+
+found_header(header: null) (value: Bytes?) {
+  value = null
+}
+
+found_header(header: Header) (value: Bytes?) {
+  value = header.value
+}
+
+# serve 是长驻任务，调用者用 run/stop 管理生命周期；故障沿任务作用域传播。
+public serve(
+  route: handler(request: Request) (response: Response),
+  listener: dever.system.Listener,
+  limits: Limits
+) () {
+  dever.system.http_serve(route, listener, limits)
+}
+
+# 单次请求，无连接池或重试；address 为数字 IP，Host 由请求头指定。
+public send(address: Text, port: Int, request: Request, limits: Limits) (
+  response: Response
+) {
+  response = read_response(dever.system.http_send(address, port, request, limits))
+}
+
+read_response(result: ResponseResult.Read(response)) (value: Response) {
+  value = response
+}
+
+read_response(result: ResponseResult.Failed(message)) (value: Response) {
+  fail(ResponseResult.Failed(message))
+}
+
+# handler 可发送完整正文、逐块写入、SSE，或升级 WebSocket；返回即结束会话。
+public serve_live(
+  route: handler(request: Request, reply: dever.system.HttpReply) (),
+  listener: dever.system.Listener,
+  limits: Limits,
+  live: LiveLimits
+) () {
+  dever.system.http_serve_live(route, listener, limits, live)
+}
+
+public respond(reply: dever.system.HttpReply, response: Response) () {
+  wrote(dever.system.http_respond(reply, response))
+}
+
+public start(reply: dever.system.HttpReply, status: Int, headers: List<Header>) () {
+  wrote(dever.system.http_start(reply, status, headers))
+}
+
+public write(reply: dever.system.HttpReply, bytes: Bytes) () {
+  wrote(dever.system.http_write(reply, bytes))
+}
+
+public finish(reply: dever.system.HttpReply) () {
+  closed(dever.system.http_finish(reply))
+}
+
+wrote(result: dever.io.WriteResult.Done) () {}
+
+wrote(result: dever.io.WriteResult.Failed(message)) () {
+  fail(dever.io.WriteResult.Failed(message))
+}
+
+closed(result: dever.io.CloseResult.Closed) () {}
+
+closed(result: dever.io.CloseResult.Failed(message)) () {
+  fail(dever.io.CloseResult.Failed(message))
+}

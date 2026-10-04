@@ -1,0 +1,16 @@
+bootstrap() () {
+  created = user.account.bootstrap(
+    "tenant-one",
+    "Tenant One",
+    " owner@example.com ",
+    " Owner ",
+    secret("correct horse battery staple")
+  )
+  user.membership.require_active(created.user_id, created.tenant_id)
+  user.account.active(created.user_id)
+  tenant = platform.tenant.active("tenant-one")
+  assert_eq(tenant.id, created.tenant_id)
+  assert_eq(tenant.key, "tenant-one")
+  unrelated = platform.tenant.provision("tenant-two", "Tenant Two")
+  assert(unrelated.id != created.tenant_id)
+}

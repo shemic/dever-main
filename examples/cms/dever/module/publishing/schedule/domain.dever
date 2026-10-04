@@ -1,0 +1,5 @@
+require_due(valid: true) () pure {}
+
+require_due(valid: false) () pure {
+  fail(dever.api.Error.Invalid)
+}

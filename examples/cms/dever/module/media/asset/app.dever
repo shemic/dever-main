@@ -1,0 +1,43 @@
+type StoreResult {
+  id: model.id
+  storage_key: Uuid
+  filename: Text
+  content_type: Text
+  size: Int
+}
+
+store(file: Upload) (result: StoreResult) {
+  filename = dever.api.upload_filename(file)
+  content_type = dever.api.upload_content_type(file)
+  size = dever.api.upload_size(file)
+  key = port.store(file)
+  asset = model.create(
+    {
+      storage_key = key
+      filename = filename
+      content_type = content_type
+      size = size
+    }
+  )
+  audit.operation.record(audit.operation.model.OperationKind.Upload, "asset", filename)
+  result = StoreResult {
+    id = asset.id
+    storage_key = asset.storage_key
+    filename = asset.filename
+    content_type = asset.content_type
+    size = asset.size
+  }
+}
+
+require_ready(id: model.id) () {
+  stored = model.get(id)
+  ready(stored.status == model.AssetStatus.Ready)
+}
+
+require_ready(id: null) () {}
+
+ready(available: true) () {}
+
+ready(available: false) () {
+  fail(dever.api.Error.Conflict)
+}

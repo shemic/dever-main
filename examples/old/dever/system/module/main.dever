@@ -1,0 +1,11 @@
+# 结果随启动参数及当前时间变化；失败以结果返回。
+
+main() (
+  arguments: List<Text>,
+  clock: Int,
+  invalid_sleep: dever.time.SleepResult
+) {
+  arguments = dever.process.arguments()
+  clock = dever.time.unix_millis()
+  invalid_sleep = result(dever.time.sleep(-1))
+}

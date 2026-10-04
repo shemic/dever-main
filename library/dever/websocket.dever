@@ -1,0 +1,111 @@
+public open(url: Text, tls: dever.system.ClientTls, limits: Limits) (
+  socket: dever.system.WebSocket
+) {
+  socket = connected(dever.system.ws_open(url, tls, limits))
+}
+
+public type Limits {
+  message_bytes: Int
+  idle_ms: Int
+  write_ms: Int
+}
+
+public type Message {
+  Text(value: Text)
+  Binary(value: Bytes)
+  Ping(value: Bytes)
+  Pong(value: Bytes)
+}
+
+public type ConnectResult {
+  Connected(socket: dever.system.WebSocket)
+  error Failed(message: Text)
+}
+
+public type ReceiveState {
+  Read(message: Message)
+  End
+}
+
+public type ReceiveResult {
+  Done(state: ReceiveState)
+  error Failed(message: Text)
+}
+
+type SystemReceiveResult {
+  Read(message: Message)
+  End
+  error Failed(message: Text)
+}
+
+public type MessageEvent {
+  Read(message: Message)
+  error Failed(message: Text)
+}
+
+public default_limits() (result: Limits) {
+  result = Limits {
+    message_bytes = 1048576
+    idle_ms = 60000
+    write_ms = 5000
+  }
+}
+
+public accept(reply: dever.system.HttpReply, limits: Limits) (socket: dever.system.WebSocket) {
+  socket = connected(dever.system.ws_accept(reply, limits))
+}
+
+public connect(address: Text, port: Int, target: Text, limits: Limits) (
+  socket: dever.system.WebSocket
+) {
+  socket = connected(dever.system.ws_connect(address, port, target, limits))
+}
+
+connected(result: ConnectResult.Connected(socket)) (value: dever.system.WebSocket) {
+  value = socket
+}
+
+connected(result: ConnectResult.Failed(message)) (value: dever.system.WebSocket) {
+  fail(ConnectResult.Failed(message))
+}
+
+public send(socket: dever.system.WebSocket, message: Message) () {
+  wrote(dever.system.ws_send(socket, message))
+}
+
+wrote(result: dever.io.WriteResult.Done) () {}
+
+wrote(result: dever.io.WriteResult.Failed(message)) () {
+  fail(dever.io.WriteResult.Failed(message))
+}
+
+public receive(socket: dever.system.WebSocket) (state: ReceiveState) {
+  state = receive_state(dever.system.ws_receive(socket))
+}
+
+receive_state(result: SystemReceiveResult.Read(message)) (state: ReceiveState) {
+  state = ReceiveState.Read(message)
+}
+
+receive_state(result: SystemReceiveResult.End) (state: ReceiveState) {
+  state = ReceiveState.End
+}
+
+receive_state(result: SystemReceiveResult.Failed(message)) (state: ReceiveState) {
+  fail(ReceiveResult.Failed(message))
+}
+
+# 拉取时处理协议控制帧；自然关闭结束序列，协议故障产生最后一个 Failed。
+public messages(socket: dever.system.WebSocket) (result: AsyncStream<MessageEvent>) {
+  result = dever.system.ws_messages(socket)
+}
+
+public close(socket: dever.system.WebSocket, code: Int, reason: Text) () {
+  closed(dever.system.ws_close(socket, code, reason))
+}
+
+closed(result: dever.io.CloseResult.Closed) () {}
+
+closed(result: dever.io.CloseResult.Failed(message)) () {
+  fail(dever.io.CloseResult.Failed(message))
+}

@@ -1,0 +1,2 @@
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"目标贯穿、共享缓存、安全闭包、Worker部署一致性"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"真实跨目标执行证据与最小回归边界"}

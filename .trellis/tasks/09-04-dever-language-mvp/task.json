@@ -1,0 +1,38 @@
+{
+  "id": "dever-language-mvp",
+  "name": "dever-language-mvp",
+  "title": "Dever Language Compiler Contracts And Library Follow-through",
+  "description": "N5 HTTP/2、定向性能矩阵与有界稳态/恢复压测、typed ORM 及双源码 CMS 合同修正已完成；业务 API 等用户重新设计，编译器发行/跨平台与自举仍未交付，根语言路线图保持进行中。",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": ".",
+  "package": null,
+  "priority": "P1",
+  "creator": "Antigravity",
+  "assignee": "Antigravity",
+  "createdAt": "2026-09-04",
+  "completedAt": null,
+  "branch": "main",
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-12-runtime-performance",
+    "09-12-runtime-performance-p2",
+    "09-12-http2",
+    "09-12-http2-performance",
+    "09-13-http2-ceiling-soak",
+    "09-13-typed-orm",
+    "09-18-cms-dual-source-contracts",
+    "09-19-application-testing"
+  ],
+  "parent": null,
+  "relatedFiles": [],
+  "notes": "2026-09-18: HTTP/2 有界饱和扫描、128/64 MiB 各 60 秒稳态与各 100 轮重连验收完成；typed ORM 子任务也已完成。原始结果见 test/performance/README.md，历史阶段证据见 implement.md。根任务仍需单独界定发行/跨平台、自举等后续路线；未运行全量测试、操作现有服务、安装全局命令或提交。",
+  "meta": {
+    "planning_workflow": "trellis",
+    "execution_mode": "inline"
+  }
+}

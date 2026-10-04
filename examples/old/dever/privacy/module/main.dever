@@ -1,0 +1,7 @@
+
+main() (before: Int, after: Int) pure {
+  original = counter.start()
+  changed = counter.increment(original)
+  before = counter.read(original)
+  after = counter.read(changed)
+}

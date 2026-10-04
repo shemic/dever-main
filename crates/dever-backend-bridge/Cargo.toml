@@ -1,0 +1,125 @@
+[package]
+name = "dever-backend-bridge"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+autotests = false
+
+[lib]
+crate-type = ["rlib", "staticlib"]
+
+# Deliberately do not inherit workspace forbid: only src/ffi.rs may allow it.
+[lints.rust]
+unsafe_code = "deny"
+unsafe_op_in_unsafe_fn = "deny"
+
+[features]
+default = []
+embedded = ["dep:cc", "dep:rustix"]
+runtime-abi = ["dep:dever-runtime", "dever-runtime/crypto", "dever-runtime/wire", "dep:libc"]
+runtime-database = ["runtime-abi", "dever-runtime/database"]
+runtime-api = ["runtime-abi", "dever-runtime/api"]
+runtime-external = ["runtime-abi", "dever-runtime/external"]
+runtime-sqlite = ["runtime-database", "dever-runtime/sqlite"]
+runtime-postgres = ["runtime-database", "dever-runtime/postgres"]
+
+[dependencies]
+dever-runtime = { workspace = true, optional = true }
+
+[target.'cfg(unix)'.dependencies]
+libc = { version = "=0.2.189", optional = true }
+rustix = { version = "=1.1.2", features = ["process"], optional = true }
+
+[dev-dependencies]
+dever-core.workspace = true
+serde_json.workspace = true
+sha2.workspace = true
+
+[build-dependencies]
+cc = { version = "=1.4.5", optional = true }
+
+[[test]]
+name = "backend_bridge"
+path = "../../test/backend_bridge.rs"
+required-features = ["embedded"]
+
+[[test]]
+name = "native_runtime_abi"
+path = "../../test/native_runtime_abi.rs"
+required-features = ["runtime-abi"]
+
+[[test]]
+name = "native_runtime_link"
+path = "../../test/native_runtime_link.rs"
+required-features = ["runtime-abi"]
+
+[[test]]
+name = "llvm_database_source"
+path = "../../test/llvm_database_source.rs"
+required-features = ["embedded", "runtime-sqlite"]
+
+[[test]]
+name = "llvm_api_source"
+path = "../../test/llvm_api_source.rs"
+required-features = ["embedded", "runtime-api"]
+
+[[test]]
+name = "llvm_job_test_source"
+path = "../../test/llvm_job_test_source.rs"
+required-features = ["embedded", "runtime-api", "runtime-sqlite"]
+
+[[test]]
+name = "llvm_native"
+path = "../../test/llvm_native.rs"
+required-features = ["embedded"]
+
+[[test]]
+name = "llvm_managed_native"
+path = "../../test/llvm_managed_native.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_result_native"
+path = "../../test/llvm_result_native.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_resource_native"
+path = "../../test/llvm_resource_native.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_async_native"
+path = "../../test/llvm_async_native.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_async_source"
+path = "../../test/llvm_async_source.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_stream_network_source"
+path = "../../test/llvm_stream_network_source.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_http_system_source"
+path = "../../test/llvm_http_system_source.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_application_source"
+path = "../../test/llvm_application_source.rs"
+required-features = ["embedded", "runtime-abi"]
+
+[[test]]
+name = "llvm_external_source"
+path = "../../test/llvm_external_source.rs"
+required-features = ["embedded", "runtime-external"]
+
+[[test]]
+name = "llvm_process_entry_source"
+path = "../../test/llvm_process_entry_source.rs"
+required-features = ["embedded"]

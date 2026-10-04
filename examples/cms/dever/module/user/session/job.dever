@@ -1,0 +1,7 @@
+database default
+
+job cleanup() () retry(3) timeout(30000) {
+  app.cleanup()
+}
+
+schedule cleanup = "0 * * * *"

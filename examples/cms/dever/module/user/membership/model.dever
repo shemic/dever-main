@@ -1,0 +1,19 @@
+type MembershipRole {
+  Owner = "所有者"
+  Editor = "编辑"
+  Reader = "读者"
+}
+
+type MembershipStatus {
+  Active = "启用"
+  Disabled = "禁用"
+}
+
+global type Membership {
+  user_id: user.account.model.principal.id
+  tenant_id: platform.tenant.model.id
+  role: MembershipRole index
+  status: MembershipStatus default MembershipStatus.Active index
+}
+
+unique(user_id, tenant_id)

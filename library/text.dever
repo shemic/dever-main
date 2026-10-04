@@ -1,0 +1,89 @@
+public trim(value: Text) (result: Text) {
+  result = dever.system.text_trim(value)
+}
+
+public lower(value: Text) (result: Text) {
+  result = dever.system.text_lower(value)
+}
+
+public upper(value: Text) (result: Text) {
+  result = dever.system.text_upper(value)
+}
+
+public codepoint(value: Text) (result: Int?) {
+  result = dever.system.text_codepoint(value)
+}
+
+public from_codepoint(value: Int) (result: Text?) {
+  result = dever.system.text_from_codepoint(value)
+}
+
+public at(value: Text, index: Int) (result: Text?) {
+  result = dever.system.text_at(value, index)
+}
+
+public slice(value: Text, start: Int, end: Int) (result: Text?) {
+  result = dever.system.text_slice(value, start, end)
+}
+
+public index_of(value: Text, pattern: Text) (result: Int?) {
+  result = dever.system.text_index_of(value, pattern)
+}
+
+public contains(value: Text, pattern: Text) (result: Bool) {
+  result = dever.system.text_contains(value, pattern)
+}
+
+public starts_with(value: Text, prefix: Text) (result: Bool) {
+  result = dever.system.text_starts_with(value, prefix)
+}
+
+public ends_with(value: Text, suffix: Text) (result: Bool) {
+  result = dever.system.text_ends_with(value, suffix)
+}
+
+public split(value: Text, separator: Text) (result: List<Text>) {
+  result = dever.system.text_split(value, separator)
+}
+
+public replace(value: Text, pattern: Text, replacement: Text) (result: Text) {
+  result = dever.system.text_replace(value, pattern, replacement)
+}
+
+public is_empty(value: Text) (result: Bool) {
+  result = length(value) == 0
+}
+
+type JoinState {
+  text: Text
+  separator: Text
+  first: Bool
+}
+
+public join(values: List<Text>, separator: Text) (result: Text) {
+  state = reduce(
+    join_piece,
+    values,
+    JoinState {
+      text = ""
+      separator = separator
+      first = true
+    }
+  )
+  result = state.text
+}
+
+join_piece(value: Text, state: JoinState) (result: JoinState) {
+  result = join_next(state.first, value, state)
+}
+
+join_next(first: true, value: Text, state: JoinState) (result: JoinState) {
+  result = state
+  result.text = value
+  result.first = false
+}
+
+join_next(first: false, value: Text, state: JoinState) (result: JoinState) {
+  result = state
+  result.text = state.text + state.separator + value
+}

@@ -1,0 +1,25 @@
+permissions() (values: List<dever.auth.Permission>) {
+  values = dever.auth.permissions()
+}
+
+save(id: Text, name: Text, all_permissions: Bool, permission_keys: List<Text>) (
+  ok: Bool
+) {
+  dever.auth.save_role(id, name, all_permissions, permission_keys)
+  ok = true
+}
+
+grant(user_id: Int, role_id: Text) (ok: Bool) {
+  dever.auth.grant_role(user_id, role_id)
+  ok = true
+}
+
+revoke(user_id: Int, role_id: Text) (ok: Bool) {
+  dever.auth.revoke_role(user_id, role_id)
+  ok = true
+}
+
+disable(role_id: Text) (ok: Bool) {
+  dever.auth.disable_role(role_id)
+  ok = true
+}

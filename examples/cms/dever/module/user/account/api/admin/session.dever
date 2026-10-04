@@ -1,0 +1,3 @@
+public post login = app.login
+
+post logout = app.logout

@@ -1,0 +1,3 @@
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"HTTP/2 streams、窗口、ALPN、结构化任务和资源预算合同"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"独立二进制基准、cgroup、报告和定向验证规则"}
+{"file":".trellis/tasks/09-12-http2-performance/research/current-benchmark-and-h2-api.md","reason":"现有 H1 基准限制、锁定 Hyper API 和 H2 负载模型结论"}

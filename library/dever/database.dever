@@ -1,0 +1,13 @@
+# Database failures retain their category across services and transactions.
+public type Error {
+  error Pool(message: Text)
+  error PoolExhausted(message: Text)
+  error Connection(message: Text)
+  error Timeout(message: Text)
+  error Cancelled(message: Text)
+  error Database(message: Text)
+  error Constraint(message: Text)
+  error NotFound(message: Text)
+  error InvalidData(message: Text)
+  error Migration(message: Text)
+}

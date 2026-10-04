@@ -1,0 +1,11 @@
+type AccountStatus {
+  Active = "启用"
+  Disabled = "禁用"
+}
+
+global type Account {
+  principal_id: user.account.model.principal.id unique
+  email: Text(254) unique
+  private password_hash: Text(255)
+  status: AccountStatus default AccountStatus.Active index
+}

@@ -1,0 +1,94 @@
+type SessionView {
+  uuid: Uuid
+}
+
+type AuthSession {
+  subject: Text
+  user_id: user.account.model.principal.id
+  tenant_id: platform.tenant.model.id
+  tenant_key: Text
+}
+
+open(
+  subject: Text,
+  account_id: user.account.model.principal.id,
+  selected_tenant_id: platform.tenant.model.id,
+  selected_tenant_key: Text,
+  site_key: Text
+) (session: SessionView) {
+  stored = model.create(
+    {
+      subject = subject
+      user_id = account_id
+      tenant_id = selected_tenant_id
+      tenant_key = selected_tenant_key
+      site = site_key
+      expires_at = dever.time.add(dever.time.now(), dever.time.duration(3600000))
+    }
+  )
+  session = SessionView {
+    uuid = stored.uuid
+  }
+}
+
+authenticate(session_id: Uuid, site_key: Text) (result: AuthSession) {
+  stored = model.first(
+    {
+      where = uuid == session_id and site == site_key and revoked == false and expires_at > dever.time.now(
+      )
+    }
+  )
+  result = auth_session(stored)
+}
+
+authenticate(session_id: null, site_key: Text) (result: AuthSession) {
+  fail(dever.api.Error.Unauthorized)
+}
+
+revoke(session_id: Uuid) () {
+  stored = model.first(
+    {
+      where = uuid == session_id and revoked == false
+    }
+  )
+  revoke_found(stored)
+}
+
+revoke(session_id: null) () {
+  fail(dever.api.Error.Unauthorized)
+}
+
+auth_session(stored: model.Session) (result: AuthSession) {
+  result = AuthSession {
+    subject = stored.subject
+    user_id = stored.user_id
+    tenant_id = stored.tenant_id
+    tenant_key = stored.tenant_key
+  }
+}
+
+auth_session(stored: null) (result: AuthSession) {
+  fail(dever.api.Error.Unauthorized)
+}
+
+revoke_found(stored: model.Session) () {
+  changed = model.update(
+    stored.id,
+    {
+      revoked = true
+    }
+  )
+  discarded = changed
+}
+
+revoke_found(stored: null) () {
+  fail(dever.api.Error.Unauthorized)
+}
+
+cleanup() () {
+  removed = model.delete(
+    {
+      where = revoked == true or expires_at <= dever.time.now()
+    }
+  )
+}

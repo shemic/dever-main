@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"Rust语言仓库开发边界"}
+{"file":".trellis/spec/backend/compiler-contracts.md","reason":"Port/Adapter和两后端的类型与失败合同"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"外部资源、沙箱、目标与生命周期"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"源位置错误和资源清理"}

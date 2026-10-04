@@ -1,0 +1,45 @@
+# Based on AppArmor 4.0 extras/bwrap-userns-restrict (GPL-2.0-only).
+# Only signed static helpers published by the root-owned Dever installer attach.
+# The exec transition is stacked under no_new_privs; child capabilities are denied.
+# On restricted hosts, kernel.apparmor_restrict_unprivileged_unconfined=1 is
+# mandatory BEFORE installation/loading: attachment paths do not constrain an
+# explicit change_profile by an unconfined caller. Never enable this policy on
+# such a host with that flag unset. Rollback removes this policy before restoring
+# the previous strict flag. Dever never changes host sysctls automatically.
+abi <abi/4.0>,
+
+@{DEVER_SANDBOX_HASH} = [0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]
+
+profile dever-bwrap /opt/dever/sandbox/@{DEVER_SANDBOX_HASH}/bwrap flags=(attach_disconnected,mediate_deleted) {
+  allow capability,
+  allow file rwlkm /{**,},
+  allow network,
+  allow unix,
+  allow ptrace,
+  allow signal,
+  allow mqueue,
+  allow io_uring,
+  allow userns,
+  allow mount,
+  allow umount,
+  allow pivot_root,
+  allow dbus,
+  allow px /** -> dever-bwrap//&dever-bwrap-child,
+}
+
+profile dever-bwrap-child flags=(attach_disconnected,mediate_deleted) {
+  allow file rwlkm /{**,},
+  allow network,
+  allow unix,
+  allow ptrace,
+  allow signal,
+  allow mqueue,
+  allow io_uring,
+  allow userns,
+  allow mount,
+  allow umount,
+  allow pivot_root,
+  allow dbus,
+  allow pix /** -> &dever-bwrap-child,
+  audit deny capability,
+}

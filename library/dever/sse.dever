@@ -1,0 +1,21 @@
+public type Event {
+  event: Text
+  data: Text
+  id: Text?
+  retry_ms: Int?
+}
+
+# 自动输出 Content-Type、默认 no-cache 和空闲心跳；重连位置由 Request 头读取。
+public start(reply: dever.system.HttpReply, headers: List<dever.http.Header>) () {
+  wrote(dever.system.sse_start(reply, headers))
+}
+
+public send(reply: dever.system.HttpReply, event: Event) () {
+  wrote(dever.system.sse_send(reply, event))
+}
+
+wrote(result: dever.io.WriteResult.Done) () {}
+
+wrote(result: dever.io.WriteResult.Failed(message)) () {
+  fail(dever.io.WriteResult.Failed(message))
+}

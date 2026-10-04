@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/index.md","reason":"Rust language owning layers"}
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Bounded standalone benchmark contracts"}
+{"file":".trellis/tasks/09-12-runtime-performance-p2/prd.md","reason":"Approved scope and acceptance"}
+{"file":".trellis/tasks/09-12-runtime-performance-p2/design.md","reason":"Reuse and ownership"}

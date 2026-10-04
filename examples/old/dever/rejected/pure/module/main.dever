@@ -1,0 +1,5 @@
+# 预期 C013：输出属于副作用。需要输出时应移除 pure。
+
+main() () pure {
+  dever.io.println("hello")
+}

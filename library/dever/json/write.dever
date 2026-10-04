@@ -1,0 +1,269 @@
+type Encoded {
+  text: Text
+  depth: Int
+  failure: Text
+}
+
+type State {
+  document: dever.json.value.Document
+  encoded: Map<Int, Encoded>
+  index: Int
+  failure: Text
+}
+
+type Children {
+  encoded: Map<Int, Encoded>
+  parent: Int
+  pieces: List<Text>
+  depth: Int
+  size: Int
+  failure: Text
+}
+
+# The output budget also bounds expansion of user-constructed shared child graphs.
+maximum_size() (result: Int) {
+  result = 16777216
+}
+
+public stringify(document: dever.json.value.Document) (text: Text) {
+  state = reduce_until(
+    node,
+    entries(document.nodes),
+    State {
+      document = document
+      encoded = {}
+      index = 0
+      failure = ""
+    }
+  )
+  text = finish(state.failure == "", state)
+}
+
+finish(valid: false, state: State) (text: Text) {
+  fail(dever.json.value.WriteResult.Failed(state.index, state.failure))
+}
+
+finish(valid: true, state: State) (text: Text) {
+  text = root(get(state.encoded, state.document.root), state.document.root)
+}
+
+root(value: null, id: Int) (text: Text) {
+  fail(
+    dever.json.value.WriteResult.Failed(
+      id,
+      "JSON root does not refer to a document node"
+    )
+  )
+}
+
+root(value: Encoded, id: Int) (text: Text) {
+  text = value.text
+}
+
+# Iteration supplies a count; lookup uses IDs, so Map insertion order is immaterial.
+node(entry: MapEntry<Int, dever.json.value.Value>, state: State) (
+  next: State,
+  stop: Bool
+) {
+  encoded = document_node(get(state.document.nodes, state.index), state)
+  next = store(encoded.failure == "", encoded, state)
+  stop = next.failure != ""
+}
+
+document_node(value: null, state: State) (result: Encoded) {
+  result = failed("JSON node IDs must be consecutive from zero")
+}
+
+document_node(value: dever.json.value.Value, state: State) (result: Encoded) {
+  encoded = encode(value, state)
+  result = bounded(length(encoded.text) <= maximum_size(), encoded)
+}
+
+store(valid: false, encoded: Encoded, state: State) (next: State) {
+  next = state
+  next.failure = encoded.failure
+}
+
+store(valid: true, encoded: Encoded, state: State) (next: State) {
+  next = state
+  next.encoded = put(state.encoded, state.index, encoded)
+  next.index = state.index + 1
+}
+
+bounded(valid: true, encoded: Encoded) (result: Encoded) {
+  result = encoded
+}
+
+bounded(valid: false, encoded: Encoded) (result: Encoded) {
+  result = failed("JSON output exceeds 16777216 Unicode scalars")
+}
+
+encoded(text: Text) (result: Encoded) {
+  result = Encoded {
+    text = text
+    depth = 0
+    failure = ""
+  }
+}
+
+failed(message: Text) (result: Encoded) {
+  result = Encoded {
+    text = ""
+    depth = 0
+    failure = message
+  }
+}
+
+encode(value: dever.json.value.Value.Null, state: State) (result: Encoded) {
+  result = encoded("null")
+}
+
+encode(value: dever.json.value.Value.Boolean(boolean), state: State) (result: Encoded) {
+  result = encoded(boolean_text(boolean))
+}
+
+encode(value: dever.json.value.Value.Number(raw), state: State) (result: Encoded) {
+  result = number(dever.json.number.valid(raw), raw)
+}
+
+encode(value: dever.json.value.Value.String(string), state: State) (result: Encoded) {
+  result = encoded(dever.json.scan.quote(string))
+}
+
+encode(value: dever.json.value.Value.Array(children), state: State) (result: Encoded) {
+  built = reduce_until(array_child, children, new_children(state))
+  result = container(built.failure == "", "[", "]", built)
+}
+
+encode(value: dever.json.value.Value.Object(members), state: State) (result: Encoded) {
+  built = reduce_until(object_child, entries(members), new_children(state))
+  result = container(built.failure == "", "{", "}", built)
+}
+
+boolean_text(value: true) (result: Text) {
+  result = "true"
+}
+
+boolean_text(value: false) (result: Text) {
+  result = "false"
+}
+
+number(valid: true, raw: Text) (result: Encoded) {
+  result = encoded(raw)
+}
+
+number(valid: false, raw: Text) (result: Encoded) {
+  result = failed("invalid JSON number spelling")
+}
+
+new_children(state: State) (result: Children) {
+  result = Children {
+    encoded = state.encoded
+    parent = state.index
+    pieces = []
+    depth = 1
+    size = 2
+    failure = ""
+  }
+}
+
+array_child(id: Int, state: Children) (next: Children, stop: Bool) {
+  next = child(id >= 0 and id < state.parent, id, "", state)
+  stop = next.failure != ""
+}
+
+object_child(member: MapEntry<Text, Int>, state: Children) (next: Children, stop: Bool) {
+  next = child(
+    member.value >= 0 and member.value < state.parent,
+    member.value,
+    dever.json.scan.quote(member.key) + ":",
+    state
+  )
+  stop = next.failure != ""
+}
+
+child(valid: false, id: Int, prefix: Text, state: Children) (next: Children) {
+  next = child_failure("JSON child references must precede their parent", state)
+}
+
+child(valid: true, id: Int, prefix: Text, state: Children) (next: Children) {
+  next = child_value(get(state.encoded, id), prefix, state)
+}
+
+child_value(value: null, prefix: Text, state: Children) (next: Children) {
+  next = child_failure("JSON child node is missing", state)
+}
+
+child_value(value: Encoded, prefix: Text, state: Children) (next: Children) {
+  size = state.size + length(prefix) + length(value.text) + separator_size(
+    length(state.pieces) > 0
+  )
+  next = child_size(size <= maximum_size(), size, value, prefix, state)
+}
+
+separator_size(needed: true) (result: Int) {
+  result = 1
+}
+
+separator_size(needed: false) (result: Int) {
+  result = 0
+}
+
+child_size(valid: false, size: Int, value: Encoded, prefix: Text, state: Children) (
+  next: Children
+) {
+  next = child_failure("JSON output exceeds 16777216 Unicode scalars", state)
+}
+
+child_size(valid: true, size: Int, value: Encoded, prefix: Text, state: Children) (
+  next: Children
+) {
+  next = state
+  next.pieces = append(state.pieces, prefix + value.text)
+  next.depth = maximum(state.depth, value.depth + 1)
+  next.size = size
+}
+
+maximum(left: Int, right: Int) (result: Int) {
+  result = larger(left >= right, left, right)
+}
+
+larger(left_larger: true, left: Int, right: Int) (result: Int) {
+  result = left
+}
+
+larger(left_larger: false, left: Int, right: Int) (result: Int) {
+  result = right
+}
+
+child_failure(message: Text, state: Children) (next: Children) {
+  next = state
+  next.failure = message
+}
+
+container(valid: false, open: Text, close: Text, state: Children) (result: Encoded) {
+  result = failed(state.failure)
+}
+
+container(valid: true, open: Text, close: Text, state: Children) (result: Encoded) {
+  result = container_depth(
+    state.depth <= dever.json.value.maximum_depth(),
+    open,
+    close,
+    state
+  )
+}
+
+container_depth(valid: false, open: Text, close: Text, state: Children) (
+  result: Encoded
+) {
+  result = failed("JSON nesting exceeds 256 containers")
+}
+
+container_depth(valid: true, open: Text, close: Text, state: Children) (result: Encoded) {
+  result = Encoded {
+    text = open + text.join(state.pieces, ",") + close
+    depth = state.depth
+    failure = ""
+  }
+}

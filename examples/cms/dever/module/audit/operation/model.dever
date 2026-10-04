@@ -1,0 +1,14 @@
+type OperationKind {
+  Login = "登录"
+  Logout = "登出"
+  Publish = "发布"
+  Upload = "上传"
+  Access = "授权"
+}
+
+type Operation {
+  actor_id: user.account.model.principal.id?
+  kind: OperationKind index
+  resource: Text(1, 120)
+  resource_id: Text(1, 120)
+}

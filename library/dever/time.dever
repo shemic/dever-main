@@ -1,0 +1,144 @@
+public type ClockResult {
+  Read(value: Int)
+  error Failed(message: Text)
+}
+
+public type SleepResult {
+  Done
+  error Failed(message: Text)
+}
+
+public unix_millis() (value: Int) {
+  value = clock_value(dever.system.time_unix_millis())
+}
+
+public monotonic_nanos() (value: Int) {
+  value = clock_value(dever.system.time_monotonic_nanos())
+}
+
+clock_value(result: ClockResult.Read(value)) (clock: Int) {
+  clock = value
+}
+
+clock_value(result: ClockResult.Failed(message)) (clock: Int) {
+  fail(ClockResult.Failed(message))
+}
+
+public sleep(millis: Int) () {
+  slept(dever.system.time_sleep(millis))
+}
+
+slept(result: SleepResult.Done) () {}
+
+slept(result: SleepResult.Failed(message)) () {
+  fail(SleepResult.Failed(message))
+}
+
+public type DateTimeResult {
+  Read(value: DateTime)
+  error Failed(message: Text)
+}
+
+datetime_value(result: DateTimeResult.Read(value)) (output: DateTime) pure {
+  output = value
+}
+
+datetime_value(result: DateTimeResult.Failed(message)) (output: DateTime) pure {
+  fail(DateTimeResult.Failed(message))
+}
+
+public type DateResult {
+  Read(value: Date)
+  error Failed(message: Text)
+}
+
+date_value(result: DateResult.Read(value)) (output: Date) pure {
+  output = value
+}
+
+date_value(result: DateResult.Failed(message)) (output: Date) pure {
+  fail(DateResult.Failed(message))
+}
+
+public type TimeResult {
+  Read(value: Time)
+  error Failed(message: Text)
+}
+
+time_value(result: TimeResult.Read(value)) (output: Time) pure {
+  output = value
+}
+
+time_value(result: TimeResult.Failed(message)) (output: Time) pure {
+  fail(TimeResult.Failed(message))
+}
+
+public type DurationResult {
+  Read(value: Duration)
+  error Failed(message: Text)
+}
+
+duration_value(result: DurationResult.Read(value)) (output: Duration) pure {
+  output = value
+}
+
+duration_value(result: DurationResult.Failed(message)) (output: Duration) pure {
+  fail(DurationResult.Failed(message))
+}
+
+public type TextResult {
+  Read(value: Text)
+  error Failed(message: Text)
+}
+
+text_value(result: TextResult.Read(value)) (output: Text) pure {
+  output = value
+}
+
+text_value(result: TextResult.Failed(message)) (output: Text) pure {
+  fail(TextResult.Failed(message))
+}
+
+public now() (output: DateTime) {
+  output = datetime_value(dever.system.time_now())
+}
+
+public parse_datetime(text: Text) (output: DateTime) pure {
+  output = datetime_value(dever.system.time_parse_datetime(text))
+}
+
+public format_datetime(value: DateTime) (output: Text) pure {
+  output = text_value(dever.system.time_format_datetime(value))
+}
+
+public parse_date(text: Text) (output: Date) pure {
+  output = date_value(dever.system.time_parse_date(text))
+}
+
+public format_date(value: Date) (output: Text) pure {
+  output = text_value(dever.system.time_format_date(value))
+}
+
+public parse_time(text: Text) (output: Time) pure {
+  output = time_value(dever.system.time_parse_time(text))
+}
+
+public format_time(value: Time) (output: Text) pure {
+  output = text_value(dever.system.time_format_time(value))
+}
+
+public add(value: DateTime, duration: Duration) (output: DateTime) pure {
+  output = datetime_value(dever.system.time_add(value, duration))
+}
+
+public subtract(value: DateTime, duration: Duration) (output: DateTime) pure {
+  output = datetime_value(dever.system.time_subtract(value, duration))
+}
+
+public difference(later: DateTime, earlier: DateTime) (output: Duration) pure {
+  output = duration_value(dever.system.time_difference(later, earlier))
+}
+
+public duration(millis: Int) (output: Duration) pure {
+  output = dever.system.time_duration(millis)
+}

@@ -1,0 +1,108 @@
+public type OpenResult {
+  Opened(file: dever.system.File)
+  error Failed(message: Text)
+}
+
+public type ReadState {
+  Read(bytes: Bytes)
+  End
+}
+
+public type ReadResult {
+  Done(state: ReadState)
+  error Failed(message: Text)
+}
+
+type SystemReadResult {
+  Read(bytes: Bytes)
+  End
+  error Failed(message: Text)
+}
+
+public type WriteResult {
+  Done
+  error Failed(message: Text)
+}
+
+public type CloseResult {
+  Closed
+  error Failed(message: Text)
+}
+
+public type ReadEvent {
+  Chunk(bytes: Bytes)
+  error Failed(message: Text)
+}
+
+public type ReadStreamResult {
+  Streaming(stream: Stream<ReadEvent>)
+  error Failed(message: Text)
+}
+
+public println(text: Text) () {
+  dever.system.stdout_write(text + "\n")
+}
+
+public open(path: Text) (file: dever.system.File) {
+  file = opened(dever.system.file_open(path))
+}
+
+public create(path: Text) (file: dever.system.File) {
+  file = opened(dever.system.file_create(path))
+}
+
+opened(result: OpenResult.Opened(file)) (value: dever.system.File) {
+  value = file
+}
+
+opened(result: OpenResult.Failed(message)) (value: dever.system.File) {
+  fail(OpenResult.Failed(message))
+}
+
+public read(file: dever.system.File, limit: Int) (state: ReadState) {
+  state = read_state(dever.system.file_read(file, limit))
+}
+
+read_state(result: SystemReadResult.Read(bytes)) (state: ReadState) {
+  state = ReadState.Read(bytes)
+}
+
+read_state(result: SystemReadResult.End) (state: ReadState) {
+  state = ReadState.End
+}
+
+read_state(result: SystemReadResult.Failed(message)) (state: ReadState) {
+  fail(ReadResult.Failed(message))
+}
+
+public write(file: dever.system.File, bytes: Bytes) () {
+  wrote(dever.system.file_write(file, bytes))
+}
+
+wrote(result: WriteResult.Done) () {}
+
+wrote(result: WriteResult.Failed(message)) () {
+  fail(WriteResult.Failed(message))
+}
+
+public close(file: dever.system.File) () {
+  closed(dever.system.file_close(file))
+}
+
+closed(result: CloseResult.Closed) () {}
+
+closed(result: CloseResult.Failed(message)) () {
+  fail(CloseResult.Failed(message))
+}
+
+public chunks(file: dever.system.File, limit: Int) (stream: Stream<ReadEvent>) {
+  stream = read_stream(dever.system.file_chunks(file, limit))
+}
+
+read_stream(result: ReadStreamResult.Streaming(stream)) (value: Stream<ReadEvent>) {
+  value = stream
+}
+
+read_stream(result: ReadStreamResult.Failed(message)) (value: Stream<ReadEvent>) {
+  fail(ReadStreamResult.Failed(message))
+}

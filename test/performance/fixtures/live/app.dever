@@ -1,0 +1,18 @@
+type WorkerFailure {
+  error Failed(message: Text)
+}
+
+tcp() (result: Bool) {
+  port.tcp()
+  result = true
+}
+
+ws() (result: Bool) {
+  port.live()
+  result = true
+}
+
+sse() (result: Bool) {
+  port.live()
+  result = true
+}

@@ -1,0 +1,6 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Focused runtime/database/process checks"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"Retry, dead-letter and cancellation error behavior"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"Job owner separation and no parallel queue implementation"}
+{"file": ".trellis/tasks/09-20-durable-jobs/research/implementation-map.md", "reason": "Verify corrected transaction, lease, cron and shutdown contracts"}
+{"file": ".trellis/spec/backend/compiler-contracts.md", "reason": "Verify language and native emitter contract parity"}
+{"file": ".trellis/spec/backend/database-guidelines.md", "reason": "Verify transaction and lease correctness"}

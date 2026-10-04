@@ -1,0 +1,58 @@
+# handler 是具名函数；reduce_until 处理当前元素后停止，不处理后面的 100。
+
+type Summary {
+  total: Int
+  count: Int
+}
+
+double(value: Int) (result: Int) pure {
+  result = value * 2
+}
+
+map_values(transform: handler(value: Int) (result: Int), values: List<Int>) (
+  results: List<Int>
+) {
+  results = each(transform, values)
+}
+
+add(value: Int, total: Int) (next: Int) pure {
+  next = total + value
+}
+
+collect(value: Int, summary: Summary) (next: Summary, stop: Bool) pure {
+  next = Summary {
+    total = summary.total + value
+    count = summary.count + 1
+  }
+  stop = next.total >= 6
+}
+
+main() (
+  mapped: List<Int>,
+  total: Int,
+  stopped: Summary,
+  empty_total: Int,
+  bytes_total: Int,
+  first_value: Int?,
+  missing: Int?
+) pure {
+  mapped = map_values(double, [1, 2, 3])
+  total = reduce(add, [1, 2, 3], 0)
+  stopped = reduce_until(
+    collect,
+    [1, 2, 3, 100],
+    Summary {
+      total = 0
+      count = 0
+    }
+  )
+  empty_total = reduce(add, [], 0)
+  bytes_total = reduce(add, dever.bytes.from_text("AB"), 0)
+  first_value = first(mapped)
+  missing = get(
+    {
+      "count" = 3
+    },
+    "unknown"
+  )
+}

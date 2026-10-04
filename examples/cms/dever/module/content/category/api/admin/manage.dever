@@ -1,0 +1,3 @@
+post create = app.create
+
+delete disable = app.disable

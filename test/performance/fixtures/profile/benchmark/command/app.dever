@@ -1,0 +1,4 @@
+run() (result: Bool) {
+  dever.io.println("profile")
+  result = true
+}

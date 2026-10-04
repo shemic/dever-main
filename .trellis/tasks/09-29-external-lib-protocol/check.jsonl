@@ -1,0 +1,4 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"parser、native process 和 bounded resource 定向测试"}
+{"file":".trellis/spec/backend/error-handling.md","reason":"business error 与 runtime fault 不得混淆"}
+{"file":".trellis/spec/backend/directory-structure.md","reason":"compiler/runtime/CLI owner 和测试目录规则"}
+{"file":".trellis/tasks/09-29-external-lib-protocol/prd.md","reason":"协议子任务验收标准"}

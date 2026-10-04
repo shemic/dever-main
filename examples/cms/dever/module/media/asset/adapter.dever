@@ -1,0 +1,3 @@
+port.store(file: Upload) (key: Uuid) {
+  key = dever.storage.put(file)
+}

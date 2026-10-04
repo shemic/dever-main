@@ -1,0 +1,4 @@
+dever-api 4
+function domain.port(Int) (port: domain.Port []) pure=true recover=None effects=[] errors=[domain.PortResult.Failed] recoveries={}
+type domain.Port record construct=public {value: Int [1..65535]}
+type domain.PortResult Ready(port: domain.Port []) | error Failed(message: Text [])

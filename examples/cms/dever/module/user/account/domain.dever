@@ -1,0 +1,49 @@
+type AccountInput {
+  address: Text
+  name: Text
+}
+
+normalize_email(email: Text) (address: Text) pure {
+  address = text.lower(text.trim(email))
+}
+
+normalize_name(display_name: Text) (name: Text) pure {
+  name = text.trim(display_name)
+}
+
+prepare(email: Text, display_name: Text) (input: AccountInput) pure {
+  address = normalize_email(email)
+  name = normalize_name(display_name)
+  require(
+    text.contains(address, "@") and not text.starts_with(address, "@") and not text.ends_with(
+      address,
+      "@"
+    ),
+    "email must contain a local part and domain"
+  )
+  require(not text.is_empty(name), "display name cannot be blank")
+  input = AccountInput {
+    address = address
+    name = name
+  }
+}
+
+require(valid: true, message: Text) () pure {}
+
+require(valid: false, message: Text) () pure {
+  fail(dever.api.Error.Invalid)
+}
+
+require_active(active: true) () pure {}
+
+require_active(active: false) () pure {
+  fail(dever.api.Error.Unauthorized)
+}
+
+require_tenant(expected: Text, actual: Text) () pure {
+  require_active(expected == actual)
+}
+
+require_tenant(expected: Text, actual: null) () pure {
+  fail(dever.api.Error.Unauthorized)
+}

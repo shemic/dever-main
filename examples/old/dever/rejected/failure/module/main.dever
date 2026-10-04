@@ -1,0 +1,9 @@
+# 预期 C012：赋值后丢弃失败。把失败作为命名输出返回可通过。
+
+type Result {
+  error Failed(message: Text)
+}
+
+main(value: Result) () {
+  discarded = value
+}

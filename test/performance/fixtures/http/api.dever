@@ -1,0 +1,7 @@
+cmd http = app.http
+
+cmd https = app.https
+
+cmd http2 = app.http2
+
+cmd https2 = app.https2

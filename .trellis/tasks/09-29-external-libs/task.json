@@ -1,0 +1,30 @@
+{
+  "id": "external-libs",
+  "name": "external-libs",
+  "title": "Dever 外部 Lib 生态",
+  "description": "让 Dever Package 通过 Port/Adapter 安全复用 PyPI、npm、Go Modules 及其它语言生态，并由统一 Lib 命令、协议和构建链管理",
+  "status": "in_progress",
+  "dev_type": null,
+  "scope": null,
+  "package": null,
+  "priority": "P1",
+  "creator": "Antigravity",
+  "assignee": "Antigravity",
+  "createdAt": "2026-09-29",
+  "completedAt": null,
+  "branch": null,
+  "base_branch": "main",
+  "worktree_path": null,
+  "commit": null,
+  "pr_url": null,
+  "subtasks": [],
+  "children": [
+    "09-29-external-lib-protocol",
+    "09-29-external-lib-ecosystems",
+    "09-29-external-lib-packaging"
+  ],
+  "parent": "09-20-production-application-language",
+  "relatedFiles": [],
+  "notes": "2026-10-02：协议/Worker、三生态高级解析构建、v5锁与收据、Package传递Lib、LLVM独立打包及Linux OS隔离已实施；原planning状态过时。官方simplejson/bufferutil/UUID构建及离线Worker通过。最终三生态签名安装、受管check/run/build及移除源码/机器目录后的无系统语言独立执行1/1通过755.81秒，Linux首装双项目双UID共享1/1通过231.51秒。正式公开和其他平台发行仍未完成。准确状态及日志统一见09-29-language-production-closure/implement.md。",
+  "meta": {}
+}

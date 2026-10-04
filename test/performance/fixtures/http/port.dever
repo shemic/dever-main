@@ -1,0 +1,9 @@
+plain(limits: dever.http.Limits, large: Bytes, lifetime: Int) () fails app.WorkerFailure
+
+secure(
+  limits: dever.http.Limits,
+  large: Bytes,
+  lifetime: Int,
+  certificate: Bytes,
+  key: Bytes
+) () fails app.WorkerFailure

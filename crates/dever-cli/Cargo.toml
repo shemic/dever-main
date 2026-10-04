@@ -1,0 +1,99 @@
+[package]
+name = "dever-cli"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+publish.workspace = true
+default-run = "dever"
+
+[lints]
+workspace = true
+
+[dependencies]
+dever-backend-bridge = { path = "../dever-backend-bridge", features = ["embedded"] }
+dever-core.workspace = true
+dever-sandbox = { path = "../dever-sandbox" }
+dever-runtime = { workspace = true, features = ["database"] }
+serde_json.workspace = true
+serde.workspace = true
+sha2.workspace = true
+ring.workspace = true
+fs2 = "=0.4.3"
+ureq = "=3.4.2"
+url = "=2.5.8"
+pep440_rs = "=0.7.3"
+pep508_rs = "=0.9.2"
+node-semver = "=2.2.0"
+base64 = "=0.22.1"
+zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
+tar = { version = "=0.4.44", default-features = false }
+flate2 = "=1.1.5"
+csv = "=1.4.0"
+goblin = { version = "=0.10.7", default-features = false, features = ["elf32", "elf64", "endian_fd", "std"] }
+
+[dev-dependencies]
+dever-runtime = { workspace = true, features = ["external"] }
+
+[target.'cfg(target_os = "linux")'.dev-dependencies]
+rustix = { version = "=1.1.2", features = ["mount", "thread"] }
+
+[target.'cfg(unix)'.dependencies]
+rustix = { version = "=1.1.2", features = ["fs", "net", "process"] }
+
+[lib]
+name = "dever_cli"
+path = "src/lib.rs"
+
+[[bin]]
+name = "dever"
+path = "src/main.rs"
+
+[[bin]]
+name = "dever-launcher"
+path = "src/bin/dever-launcher.rs"
+
+[[bin]]
+name = "deverd"
+path = "src/bin/deverd.rs"
+
+[[test]]
+name = "llvm_cli"
+path = "../../test/dever-cli-tests/llvm_cli.rs"
+
+[[example]]
+name = "native-release"
+path = "../../sdk/native-release.rs"
+test = false
+
+[[example]]
+name = "native-acceptance-init"
+path = "../../test/dever-cli-tests/support/native_acceptance_init.rs"
+test = false
+
+[[test]]
+name = "native_release"
+path = "../../test/dever-cli-tests/native_release.rs"
+
+[[test]]
+name = "cms_project"
+path = "../../test/dever-cli-tests/cms_project.rs"
+
+[[test]]
+name = "shared_toolchain"
+path = "../../test/dever-cli-tests/shared_toolchain.rs"
+
+[[test]]
+name = "external_libs"
+path = "../../test/dever-cli-tests/external_libs.rs"
+
+[[test]]
+name = "external_workers"
+path = "../../test/dever-cli-tests/external_workers.rs"
+
+[[test]]
+name = "packages"
+path = "../../test/dever-cli-tests/packages.rs"
+
+[[test]]
+name = "new_project"
+path = "../../test/dever-cli-tests/new_project.rs"

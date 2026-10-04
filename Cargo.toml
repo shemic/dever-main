@@ -1,0 +1,63 @@
+[workspace]
+members = ["crates/dever-core", "crates/dever-runtime", "crates/dever-cli", "crates/dever-backend-bridge", "crates/dever-sandbox", "test/dever-tests"]
+resolver = "3"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+publish = false
+
+[workspace.lints.rust]
+unsafe_code = "forbid"
+
+[workspace.dependencies]
+dever-core = { path = "crates/dever-core" }
+dever-runtime = { path = "crates/dever-runtime" }
+dec = "=0.4.11"
+indexmap = "=2.14.0"
+pulldown-cmark = { version = "=0.13.4", default-features = false }
+tokio = { version = "=1.53.1", features = ["rt-multi-thread", "sync", "time", "net", "process", "io-util", "macros", "signal"] }
+futures-util = { version = "=0.3.34", default-features = false, features = ["std", "async-await", "sink"] }
+bytes = "=1.12.1"
+base64 = "=0.22.1"
+hyper = { version = "=1.11.1", features = ["http1", "http2", "server", "client"] }
+hyper-util = { version = "=0.1.20", features = ["tokio"] }
+http-body-util = "=0.1.5"
+tokio-tungstenite = { version = "=0.30.0", default-features = false, features = ["handshake"] }
+tokio-rustls = { version = "=0.26.5", default-features = false, features = ["ring", "tls12"] }
+rustls = { version = "=0.23.44", default-features = false, features = ["ring", "std", "tls12"] }
+webpki-roots = "=1.0.8"
+serde = { version = "=1.0.228", features = ["derive"] }
+serde_json = "=1.0.145"
+deadpool-sqlite = { version = "=0.14.0", default-features = false, features = ["rt_tokio_1", "bundled"] }
+deadpool-postgres = { version = "=0.14.2", default-features = false, features = ["rt_tokio_1"] }
+tokio-postgres = { version = "=0.7.18", default-features = false, features = ["runtime"] }
+tokio-postgres-rustls = { version = "=0.14.0", default-features = false, features = ["ring", "native-certs"] }
+getrandom = "=0.2.17"
+argon2 = { version = "=0.5.3", features = ["zeroize"] }
+sha2 = "=0.10.9"
+ring = "=0.17.14"
+hmac = "=0.12.1"
+subtle = "=2.6.1"
+zeroize = "=1.9.0"
+chrono = { version = "=0.4.45", default-features = false, features = ["std"] }
+
+[profile.release]
+codegen-units = 1
+lto = "fat"
+
+# Static archives retain linkable symbols; final program stripping belongs to LLD.
+[profile.runtime-pack]
+inherits = "release"
+debug = 0
+strip = "debuginfo"
+incremental = false
+
+[profile.dev]
+debug = 0
+incremental = false
+
+[profile.test]
+debug = 0
+incremental = false

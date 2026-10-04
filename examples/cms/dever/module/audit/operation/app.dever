@@ -1,0 +1,10 @@
+record(kind: model.OperationKind, resource: Text, resource_id: Text) () {
+  stored = model.create(
+    {
+      kind = kind
+      resource = resource
+      resource_id = resource_id
+    }
+  )
+  discarded = stored
+}

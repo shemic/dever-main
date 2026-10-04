@@ -1,0 +1,5 @@
+cmd tcp = app.tcp
+
+cmd ws = app.ws
+
+cmd sse = app.sse

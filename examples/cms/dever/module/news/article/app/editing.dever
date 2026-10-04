@@ -1,0 +1,114 @@
+type ArticleView {
+  id: model.id
+  slug: Text
+  title: Text
+  body: Text
+  version: Int
+  category_id: content.category.model.id?
+  asset_id: media.asset.model.id?
+}
+
+type ArticlePage {
+  rows: List<ArticleView>
+  total: Int
+}
+
+create(
+  slug: Text,
+  title: Text,
+  body: Text,
+  category_id: content.category.model.id?,
+  asset_id: media.asset.model.id?
+) (article: ArticleView) {
+  normalized_slug = domain.normalize_slug(slug)
+  normalized_title = domain.normalize_title(title)
+  domain.require_content(normalized_slug, normalized_title, body)
+  content.category.require_active(category_id)
+  media.asset.require_ready(asset_id)
+  stored = model.create(
+    {
+      author_id = user.account.current_user()
+      slug = normalized_slug
+      title = normalized_title
+      body = body
+      category_id = category_id
+      asset_id = asset_id
+    }
+  )
+  article = detail(stored.id)
+}
+
+list(size: Int) (articles: ArticlePage) {
+  author = user.account.current_user()
+  articles = ArticlePage {
+    rows = model.owned_articles(author, domain.page_size(size))
+    total = model.count(
+      {
+        where = author_id == author
+      }
+    )
+  }
+}
+
+detail(id: model.id) (article: ArticleView) {
+  stored = model.get(id)
+  domain.require_owner(dever.auth.owns_user(stored.author_id))
+  article = ArticleView {
+    id = stored.id
+    slug = stored.slug
+    title = stored.title
+    body = stored.body
+    version = stored.version
+    category_id = stored.category_id
+    asset_id = stored.asset_id
+  }
+}
+
+remove(id: model.id) (removed: Int) {
+  stored = model.get(id)
+  domain.require_owner(dever.auth.owns_user(stored.author_id))
+  domain.require_draft(stored.status == model.ArticleStatus.Draft)
+  removed = model.delete(
+    {
+      where = id == stored.id and version == stored.version
+    }
+  )
+  domain.require_updated(removed)
+}
+
+edit(
+  id: model.id,
+  expected_version: Int,
+  title: Text,
+  body: Text,
+  category_id: content.category.model.id?,
+  asset_id: media.asset.model.id?
+) (article: ArticleView) {
+  stored = model.get(id)
+  domain.require_owner(dever.auth.owns_user(stored.author_id))
+  domain.require_draft(stored.status == model.ArticleStatus.Draft)
+  normalized_title = domain.normalize_title(title)
+  domain.require_content(stored.slug, normalized_title, body)
+  content.category.require_active(category_id)
+  media.asset.require_ready(asset_id)
+  changed = model.update(
+    {
+      where = id == stored.id and version == expected_version and status == model.ArticleStatus.Draft
+    },
+    {
+      title = normalized_title
+      body = body
+      category_id = category_id
+      asset_id = asset_id
+      version = expected_version + 1
+    }
+  )
+  domain.require_updated(changed)
+  article = detail(stored.id)
+}
+
+require_schedulable(article_id: model.id) () {
+  stored = model.get(article_id)
+  domain.require_owner(dever.auth.owns_user(stored.author_id))
+  domain.require_draft(stored.status == model.ArticleStatus.Draft)
+}

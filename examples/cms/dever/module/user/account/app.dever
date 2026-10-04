@@ -1,0 +1,157 @@
+type AccountView {
+  id: model.principal.id
+  uuid: Uuid
+  email: Text
+  display_name: Text
+}
+
+type BootstrapView {
+  tenant_id: platform.tenant.model.id
+  user_id: model.principal.id
+  credential_id: model.id
+}
+
+type LoginView {
+  account: AccountView
+  tenant_id: platform.tenant.model.id
+  site: Text
+}
+
+type LogoutView {
+  revoked: Bool
+}
+
+type Identity {
+  id: Text
+  user_id: model.principal.id?
+  tenant_id: platform.tenant.model.id?
+}
+
+bootstrap(
+  tenant_key: Text,
+  tenant_name: Text,
+  email: Text,
+  display_name: Text,
+  password: Secret
+) (result: BootstrapView) {
+  tenant = platform.tenant.provision(tenant_key, tenant_name)
+  input = domain.prepare(email, display_name)
+  hash = blocking(dever.crypto.password_hash(password))
+  principal = model.principal.create(
+    {
+      display_name = input.name
+    }
+  )
+  stored = model.create(
+    {
+      principal_id = principal.id
+      email = input.address
+      password_hash = hash
+    }
+  )
+  user.membership.grant_owner(principal.id, tenant.id)
+  result = BootstrapView {
+    tenant_id = tenant.id
+    user_id = principal.id
+    credential_id = stored.id
+  }
+}
+
+login(credential_id: model.id, password: Secret, tenant: Text) (result: LoginView) {
+  domain.require_active(
+    model.exists(
+      {
+        where = id == credential_id
+      }
+    )
+  )
+  stored = model.get(credential_id)
+  principal = model.principal.get(stored.principal_id)
+  selected = platform.tenant.active(tenant)
+  domain.require_active(stored.status == model.AccountStatus.Active)
+  domain.require_active(principal.status == model.principal.PrincipalStatus.Active)
+  domain.require_active(
+    blocking(dever.crypto.password_verify(password, stored.password_hash))
+  )
+  authenticated = establish_login(credential_id, selected.key, dever.site.key())
+  dever.auth.issue_cookie(
+    authenticated.subject,
+    uuid.to_text(authenticated.session_id),
+    authenticated.tenant_key
+  )
+  result = authenticated.result
+}
+
+transaction establish_login(credential_id: model.id, tenant: Text, site: Text) (
+  result: LoginView,
+  subject: Text,
+  session_id: Uuid,
+  tenant_key: Text
+) {
+  stored = model.get(credential_id)
+  principal = model.principal.get(stored.principal_id)
+  selected = platform.tenant.active(tenant)
+  domain.require_active(stored.status == model.AccountStatus.Active)
+  domain.require_active(principal.status == model.principal.PrincipalStatus.Active)
+  user.membership.require_active(principal.id, selected.id)
+  session = user.session.open(
+    uuid.to_text(principal.uuid),
+    principal.id,
+    selected.id,
+    selected.key,
+    site
+  )
+  result = LoginView {
+    account = AccountView {
+      id = principal.id
+      uuid = principal.uuid
+      email = stored.email
+      display_name = principal.display_name
+    }
+    tenant_id = selected.id
+    site = site
+  }
+  subject = uuid.to_text(principal.uuid)
+  session_id = session.uuid
+  tenant_key = selected.key
+}
+
+logout() (result: LogoutView) {
+  user.session.revoke(uuid.parse(dever.auth.session()))
+  dever.auth.clear_cookie()
+  result = LogoutView {
+    revoked = true
+  }
+}
+
+verify(claims: dever.auth.Claims) (identity: Identity) {
+  session = user.session.authenticate(uuid.parse(claims.session), claims.site)
+  domain.require_active(session.subject == claims.subject)
+  domain.require_tenant(session.tenant_key, claims.tenant)
+  selected = platform.tenant.active(session.tenant_key)
+  domain.require_active(selected.id == session.tenant_id)
+  active(session.user_id)
+  user.membership.require_active(session.user_id, session.tenant_id)
+  identity = Identity {
+    id = claims.subject
+    user_id = session.user_id
+    tenant_id = session.tenant_id
+  }
+}
+
+active(user_id: model.principal.id) () {
+  principal = model.principal.get(user_id)
+  domain.require_active(principal.status == model.principal.PrincipalStatus.Active)
+}
+
+current_user() (id: model.principal.id) {
+  id = require_user(dever.auth.user_id())
+}
+
+require_user(value: model.principal.id) (id: model.principal.id) {
+  id = value
+}
+
+require_user(value: null) (id: model.principal.id) {
+  fail(dever.api.Error.Unauthorized)
+}

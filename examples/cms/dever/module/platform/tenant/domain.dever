@@ -1,0 +1,13 @@
+normalize_key(value: Text) (key: Text) pure {
+  key = text.lower(text.trim(value))
+}
+
+normalize_name(value: Text) (name: Text) pure {
+  name = text.trim(value)
+}
+
+require_active(active: true) () pure {}
+
+require_active(active: false) () pure {
+  fail(dever.api.Error.Unauthorized)
+}

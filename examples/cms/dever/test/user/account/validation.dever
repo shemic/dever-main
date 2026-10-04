@@ -1,0 +1,8 @@
+validation() () {
+  prepared = domain.prepare(" OWNER@EXAMPLE.COM ", " Owner ")
+  assert_eq(prepared.address, "owner@example.com")
+  assert_eq(prepared.name, "Owner")
+  unicode_name = domain.prepare("editor@example.com", " 编辑员 ")
+  assert_eq(unicode_name.address, "editor@example.com")
+  assert_eq(unicode_name.name, "编辑员")
+}

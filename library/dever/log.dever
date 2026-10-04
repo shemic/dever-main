@@ -1,0 +1,15 @@
+public debug(message: Text, fields: Map<Text, Text>) () {
+  dever.system.log_debug(message, fields)
+}
+
+public info(message: Text, fields: Map<Text, Text>) () {
+  dever.system.log_info(message, fields)
+}
+
+public warn(message: Text, fields: Map<Text, Text>) () {
+  dever.system.log_warn(message, fields)
+}
+
+public error(message: Text, fields: Map<Text, Text>) () {
+  dever.system.log_error(message, fields)
+}
