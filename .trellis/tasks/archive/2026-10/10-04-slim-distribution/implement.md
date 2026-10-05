@@ -27,7 +27,7 @@
 - [x] 实际扩展准备/锁恢复/跨项目复用、ARM 构建、已准备资源离线和独立应用执行。
 - [x] 安装/更新失败恢复和成功更新：定向回归通过；真实负载本地后继 catalog 的 4 阶段更新事务验收通过。公开网络单独阻塞，不混同。
 - [x] 清理本次 owned 临时产物，保留 durable assets、hash、验收 JSON 和源码备份。
-- [ ] 最终 diff/self review、任务进度、Git 提交/push 和 Release 状态准确记录。
+- [x] 最终 diff/self review、任务进度、Git 提交/push 和 Release 状态准确记录。实现与本地验收完成；公开 Release 条件未满足，仍属既有公开发行待办。
 
 ## 构建资源
 
@@ -53,4 +53,5 @@
 - 独立 trellis-check 对新增验收夹具/作者助手再次限定复核，无阻塞。产品验证合计 Rust 48 项、Python 10 项；正式实包 13 阶段、更新事务 4 阶段通过。fmt/clippy/skill 检查通过；未运行无关全量 CI/压力测试。
 - 仅为回收本轮已完成的测试产物，Cargo clean CLI dev profile 再释放 376.8 MiB；正式包、作者输入、源码备份保留。
 - 所有本轮隔离安装镜像均已卸载，自有 daemon/namespace 已退出；空临时目录已移除。正式构建临时目录核对仅含本轮 Rust 缓存/产物，保留工具与正式资产后清理约 556 MiB tmpfs。该目录没有新版 Cargo clean 要求的 CACHEDIR.TAG，未补造标记，核对归属后按精确目录移除；可从源码重建。
+- 核心提交 `4fda7c8c1a33b843e2fca219cb3bc95c09471716`、skill 提交 `27ac8f21c2e82458e00161154e277eb742c6a231` 已分别推送到两个官方仓库 main；`v0.1.1` 标签已推送并指向核心工作提交。发布包不包含后续仅记录/归档提交的变化。GitHub API 未登录，Release 资产尚未上传，线上首次下载/更新未运行；不能将已推送标签等同于发布完成。
 - GitHub SSH 源码访问可用；GitHub Release API 尚未登录。不能把源码/tag push 或本地模拟传输当作公开发布及线上更新。
