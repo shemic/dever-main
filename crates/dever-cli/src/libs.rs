@@ -15,6 +15,7 @@ use sha2::{Digest, Sha256};
 pub mod build;
 mod mutation;
 mod registry;
+pub mod restore;
 pub(crate) use mutation::ProjectMutation;
 pub use registry::npm;
 pub(crate) use registry::python_dependencies;
@@ -22,7 +23,7 @@ pub use registry::sumdb;
 pub use registry::{HttpRegistry, RegistryResolver, RegistryRuntime, RegistryTransport};
 pub(crate) use registry::{InstalledRegistryPack, archive_files};
 
-const LOCK_FORMAT: &str = "dever-lock-v5";
+const LOCK_FORMAT: &str = "dever-lock-v6";
 const TOOLCHAIN: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -240,6 +241,15 @@ pub struct LockedArtifact {
     pub path: String,
     pub bytes: u64,
     pub sha256: String,
+    pub source: Option<RegistrySource>,
+}
+
+#[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
+pub struct RegistrySource {
+    pub ecosystem: Ecosystem,
+    pub locator: String,
+    pub filename: String,
 }
 
 #[derive(Clone, Debug, Eq, Ord, PartialEq, PartialOrd, Serialize, Deserialize)]
@@ -421,6 +431,7 @@ impl FixturePackage {
                 path: artifact.path.clone(),
                 bytes: artifact.bytes.len() as u64,
                 sha256: sha256(&artifact.bytes),
+                source: None,
             })
             .collect::<Vec<_>>();
         artifacts.sort();
@@ -635,7 +646,7 @@ pub(crate) fn resolve_project(
         lock.encode()?;
         return Ok(lock);
     }
-    let managed = InstalledRegistry::current(target)?;
+    let managed = PreparingRegistry(InstalledRegistry::current(target)?);
     let mut runtimes = BTreeMap::new();
     let mut ecosystems = all
         .iter()
@@ -646,7 +657,10 @@ pub(crate) fn resolve_project(
         ecosystems.insert(worker.ecosystem.parse()?);
     }
     for ecosystem in ecosystems {
-        runtimes.insert(ecosystem.clone(), managed.runtime(ecosystem)?.0);
+        runtimes.insert(
+            ecosystem.clone(),
+            build::Inputs::runtime(&managed, ecosystem)?.0,
+        );
     }
     for worker in workers.iter().filter(|worker| worker.ecosystem != "exec") {
         let ecosystem: Ecosystem = worker.ecosystem.parse()?;
@@ -658,7 +672,7 @@ pub(crate) fn resolve_project(
         }
     }
     let store = ManagedArtifactStore {
-        layout: managed.layout.clone(),
+        layout: managed.0.layout.clone(),
     };
     let transport = HttpRegistry::official();
     let verified = sumdb::verify_chain(&prior_evidence, &sumdb::Verifier::official())?;
@@ -705,11 +719,38 @@ impl LibResolver for ProjectResolver<'_> {
     }
 }
 
-#[derive(Clone)]
 struct InstalledRegistry {
     layout: crate::toolchain::Layout,
-    version_root: PathBuf,
+    version: crate::toolchain::Version,
+    resources: crate::toolchain::SignedResources,
     target: crate::toolchain::BuildTarget,
+}
+
+/// Only explicit dependency preparation constructs this capability. Offline
+/// readers retain InstalledRegistry and cannot request an installation.
+struct PreparingRegistry(InstalledRegistry);
+
+impl PreparingRegistry {
+    fn ensure(&self, kind: crate::toolchain::ExtensionKind) -> Result<(), String> {
+        crate::toolchain::ensure_extension(&self.0.layout, &self.0.version, kind, self.0.target)
+    }
+}
+
+impl build::Inputs for PreparingRegistry {
+    fn runtime(&self, ecosystem: Ecosystem) -> Result<(RegistryRuntime, Vec<u8>), String> {
+        self.ensure(crate::toolchain::ExtensionKind::Runtime(ecosystem.clone()))?;
+        self.0.runtime(ecosystem)
+    }
+    fn tools(&self, ecosystem: Ecosystem) -> Result<(build::pack::Descriptor, Vec<u8>), String> {
+        self.ensure(crate::toolchain::ExtensionKind::Build(ecosystem.clone()))?;
+        build::Inputs::tools(&self.0, ecosystem)
+    }
+    fn assets(&self) -> Result<Vec<(String, Vec<u8>)>, String> {
+        build::Inputs::assets(&self.0)
+    }
+    fn diagnostic(&self, output: &[u8]) {
+        build::Inputs::diagnostic(&self.0, output);
+    }
 }
 
 impl build::Inputs for InstalledRegistry {
@@ -782,8 +823,9 @@ impl InstalledRegistry {
             return Err("running Dever core is not the verified managed release".into());
         }
         Ok(Self {
+            resources: crate::toolchain::SignedResources::load(&layout, &version)?,
             layout,
-            version_root: version_root.to_path_buf(),
+            version,
             target,
         })
     }
@@ -815,40 +857,18 @@ impl InstalledRegistry {
     }
 
     fn signed_artifact(&self, relative: &Path) -> Result<Vec<u8>, String> {
-        let manifest: crate::toolchain::ReleaseManifest = serde_json::from_slice(
-            &fs::read(self.version_root.join("manifest.json"))
-                .map_err(|error| error.to_string())?,
-        )
-        .map_err(|error| format!("invalid signed release manifest: {error}"))?;
         let name = relative.to_str().ok_or("runtime path is not UTF-8")?;
-        let identity = manifest
-            .artifacts
-            .iter()
-            .find(|artifact| artifact.path == name)
-            .ok_or_else(|| format!("signed release does not include runtime artifact '{name}'"))?;
-        let bytes = fs::read(self.version_root.join(relative))
-            .map_err(|error| format!("cannot read signed runtime artifact '{name}': {error}"))?;
-        if bytes.len() as u64 != identity.bytes || sha256(&bytes) != identity.sha256 {
-            return Err(format!(
-                "signed runtime artifact '{name}' failed identity verification"
-            ));
-        }
-        Ok(bytes)
+        self.resources.read(name)
     }
 
     fn sandbox_resources(
         &self,
         target: crate::toolchain::BuildTarget,
     ) -> Result<Vec<dever_core::native::EmbeddedResource>, String> {
-        let manifest: crate::toolchain::ReleaseManifest = serde_json::from_slice(
-            &fs::read(self.version_root.join("manifest.json"))
-                .map_err(|error| error.to_string())?,
-        )
-        .map_err(|error| format!("invalid signed release manifest: {error}"))?;
         let prefix = format!("sandbox/{}/", target.platform());
         let mut resources = Vec::new();
         let mut files = Vec::new();
-        for artifact in &manifest.artifacts {
+        for artifact in self.resources.artifacts(&prefix)? {
             let Some(relative) = artifact.path.strip_prefix(&prefix) else {
                 continue;
             };
@@ -896,7 +916,7 @@ impl ArtifactStore for ManagedArtifactStore {
         bytes: u64,
         _target: &str,
     ) -> Result<Option<Vec<u8>>, String> {
-        crate::toolchain::artifact_get(&self.layout, sha256, bytes).map(Some)
+        crate::toolchain::artifact_get_optional(&self.layout, sha256, bytes)
     }
 }
 
@@ -1237,13 +1257,28 @@ pub(crate) fn bound_program_workers(
     program: &dever_core::hir::Program,
     target: crate::toolchain::BuildTarget,
 ) -> Result<Vec<LockedWorker>, String> {
-    let mut workers = program_workers(program)?;
+    bind_workers(program_workers(program)?, target, false)
+}
+
+fn bind_workers(
+    mut workers: Vec<LockedWorker>,
+    target: crate::toolchain::BuildTarget,
+    prepare: bool,
+) -> Result<Vec<LockedWorker>, String> {
     if workers.iter().all(|worker| worker.ecosystem == "exec") {
         return Ok(workers);
     }
     let managed = InstalledRegistry::current(target)?;
     for worker in &mut workers {
         if worker.ecosystem != "exec" {
+            if prepare {
+                crate::toolchain::ensure_extension(
+                    &managed.layout,
+                    &managed.version,
+                    crate::toolchain::ExtensionKind::Runtime(worker.ecosystem.parse()?),
+                    target,
+                )?;
+            }
             worker.runtime = Some(managed.runtime(worker.ecosystem.parse()?)?.0.pack);
         }
     }
@@ -1876,9 +1911,22 @@ pub fn execute_for_target(
     let _mutation = ProjectMutation::for_command(command, project_root)?;
     let path = project_root.join("dever.lock");
     match command {
+        "install" => {
+            if !specs.is_empty() {
+                return Err(
+                    "dever lib install accepts no Lib specs; it restores the existing dever.lock"
+                        .into(),
+                );
+            }
+            restore::install(project_root, target).map(|report| report.summary())
+        }
         "add" => {
             let mut requested = read_declarations(project_root)?;
-            let workers = source_workers(project_root, target)?;
+            let workers = prepare_source_workers_with_packages(
+                project_root,
+                &crate::packages::sources(project_root)?,
+                target,
+            )?;
             let package_libs = crate::packages::declared_libs(project_root)?;
             if specs.is_empty()
                 && requested.is_empty()
@@ -1920,7 +1968,11 @@ pub fn execute_for_target(
                     .map(|value| value.parse())
                     .collect::<Result<Vec<LibSpec>, _>>()?
             };
-            let workers = source_workers(project_root, target)?;
+            let workers = prepare_source_workers_with_packages(
+                project_root,
+                &crate::packages::sources(project_root)?,
+                target,
+            )?;
             let package_libs = crate::packages::declared_libs(project_root)?;
             if requested.is_empty() && workers.is_empty() && package_libs.is_empty() {
                 return Err("dever lib update requires declared libs or exact lib specs".into());
@@ -2175,6 +2227,29 @@ pub(crate) fn source_workers_with_packages(
     packages: &[dever_core::source::PackageSource],
     target: crate::toolchain::BuildTarget,
 ) -> Result<Vec<LockedWorker>, String> {
+    bind_workers(
+        unbound_source_workers(project_root, packages)?,
+        target,
+        false,
+    )
+}
+
+pub(crate) fn prepare_source_workers_with_packages(
+    project_root: &Path,
+    packages: &[dever_core::source::PackageSource],
+    target: crate::toolchain::BuildTarget,
+) -> Result<Vec<LockedWorker>, String> {
+    bind_workers(
+        unbound_source_workers(project_root, packages)?,
+        target,
+        true,
+    )
+}
+
+fn unbound_source_workers(
+    project_root: &Path,
+    packages: &[dever_core::source::PackageSource],
+) -> Result<Vec<LockedWorker>, String> {
     let source_root = project_root.join("module");
     if !source_root.exists() && packages.is_empty() {
         return Ok(Vec::new());
@@ -2193,7 +2268,7 @@ pub(crate) fn source_workers_with_packages(
             .map(|error| error.render(&sources))
             .collect::<String>()
     })?;
-    bound_program_workers(&program, target)
+    program_workers(&program)
 }
 
 fn declaration_path(project_root: &Path) -> PathBuf {
@@ -2481,6 +2556,16 @@ fn validate_runtime(runtime: &RuntimePack) -> Result<(), String> {
 }
 
 fn validate_artifact(artifact: &LockedArtifact) -> Result<(), String> {
+    if let Some(source) = &artifact.source {
+        crate::workers::valid_path(&source.filename)?;
+        if source.filename.contains('/')
+            || source.locator.is_empty()
+            || source.locator.len() > 8192
+            || source.locator.chars().any(char::is_control)
+        {
+            return Err("invalid locked registry source locator or filename".into());
+        }
+    }
     if artifact.target.is_empty() || artifact.bytes == 0 {
         return Err("artifact target/size is invalid".into());
     }

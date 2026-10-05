@@ -1,0 +1,5 @@
+{"file":".trellis/spec/backend/quality-guidelines.md","reason":"Focused checks and actual CLI verification"}
+{"file":".trellis/spec/backend/toolchain-and-library.md","reason":"Distribution security and offline invariants"}
+{"file":".trellis/tasks/10-04-slim-distribution/prd.md","reason":"Required deliverables and acceptance criteria"}
+{"file":".trellis/tasks/10-04-slim-distribution/design.md","reason":"Implementation boundaries and exact restore contract"}
+{"file":".trellis/tasks/10-04-slim-distribution/implement.md","reason":"Verification evidence and ownership"}

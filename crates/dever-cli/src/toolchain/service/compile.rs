@@ -112,13 +112,15 @@ fn verify_pack(
     target: super::super::BuildTarget,
 ) -> Result<(), String> {
     let root = compiler
-        .core
-        .parent()
-        .ok_or("installed compiler has no directory")?;
+        .resources
+        .root(&format!("runtime/{}/manifest.json", target.platform()))?;
     let artifacts =
-        super::super::runtime_pack::validate(root, compiler.manifest.version.as_str(), target)?;
+        super::super::runtime_pack::validate(&root, compiler.manifest.version.as_str(), target)?;
+    let signed_artifacts = compiler
+        .resources
+        .artifacts(&format!("runtime/{}/", target.platform()))?;
     for input in artifacts {
-        if !compiler.manifest.artifacts.iter().any(|signed| {
+        if !signed_artifacts.iter().any(|signed| {
             signed.path == input.path
                 && signed.bytes == input.bytes
                 && signed.sha256 == input.sha256

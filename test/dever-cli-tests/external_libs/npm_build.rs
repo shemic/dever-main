@@ -65,7 +65,7 @@ fn npm_registry_install_hooks_do_not_run_publishing_lifecycle() {
     );
 }
 
-fn locked_installation_fixture() -> (LockFile, Vec<u8>) {
+fn locked_installation_fixture() -> (LockFile, Vec<u8>, FixtureArtifactStore) {
     let mut registry = LocalRegistry(BTreeMap::new());
     npm_tests::release(
         &mut registry,
@@ -85,11 +85,13 @@ fn locked_installation_fixture() -> (LockFile, Vec<u8>) {
             "npm:other@1.0.0".parse().unwrap(),
         ])
         .unwrap();
-    let sources = lock
+    let mut sources: Vec<_> = lock
         .libs
         .iter()
         .flat_map(|lib| lib.artifacts.clone())
         .collect();
+    sources.sort();
+    sources.dedup();
     let archives = lock
         .libs
         .iter()
@@ -159,9 +161,10 @@ fn locked_installation_fixture() -> (LockFile, Vec<u8>) {
         ),
         python: None,
         dynamic_requires: vec![],
-        dependencies: Box::new(LockFile::new(vec![]).unwrap()),
+        inputs: Box::new(lock.clone()),
         config_settings: BTreeMap::new(),
         output: dever_cli::libs::LockedArtifact {
+            source: None,
             target: runtime.target,
             path: format!("build/npm/{hash}/installation.tgz"),
             bytes: bytes.len() as u64,
@@ -171,7 +174,24 @@ fn locked_installation_fixture() -> (LockFile, Vec<u8>) {
     lock.npm[0].build = Some(receipt.identity().unwrap());
     lock.builds.push(receipt);
     doctor(&lock).unwrap();
-    (lock, bytes)
+    (lock, bytes, store)
+}
+
+#[test]
+fn cached_npm_build_restore_does_not_load_build_tools_or_auxiliary_runtime() {
+    let (lock, bytes, store) = locked_installation_fixture();
+    store
+        .publish(&bytes, &lock.builds[0].output.target)
+        .unwrap();
+    dever_cli::libs::restore::restore_artifacts(
+        &lock,
+        &LocalRegistry(BTreeMap::new()),
+        &store,
+        &super::restore_tests::RuntimeOnly,
+        "linux-x86_64",
+        &sumdb_tests::verifier(),
+    )
+    .unwrap();
 }
 
 #[test]
@@ -179,7 +199,7 @@ fn npm_expanded_outputs_are_pruned_only_when_no_raw_consumer_remains() {
     use dever_cli::libs::{LockedWorker, prune_expanded_resources};
     use dever_core::native::EmbeddedResource;
 
-    let (mut lock, bytes) = locked_installation_fixture();
+    let (mut lock, bytes, _) = locked_installation_fixture();
     let roots = lock.npm[0].roots.clone();
     let other = vec!["npm:other@1.0.0".parse().unwrap()];
     lock.npm = npm::retain(&lock, &[roots.clone(), other.clone()]).unwrap();
@@ -231,7 +251,7 @@ fn npm_expanded_outputs_are_pruned_only_when_no_raw_consumer_remains() {
 
 #[test]
 fn npm_native_admission_accounts_every_addon_and_prunes_unsupported_objects() {
-    let (lock, bytes) = locked_installation_fixture();
+    let (lock, bytes, _) = locked_installation_fixture();
     let files = dever_cli::libs::build::npm_installation(&lock, &lock.npm[0], &bytes).unwrap();
     assert!(files.iter().all(|(path, _, _)| !path.ends_with(".node")));
     let mut missing = lock.clone();
@@ -262,7 +282,7 @@ fn npm_native_admission_accounts_every_addon_and_prunes_unsupported_objects() {
 
 #[test]
 fn npm_locked_output_projects_retained_roots_without_rerunning_hooks() {
-    let (lock, bytes) = locked_installation_fixture();
+    let (lock, bytes, _) = locked_installation_fixture();
     let project = TemporaryDirectory::new();
     fs::create_dir(project.path().join("config")).unwrap();
     fs::write(
@@ -468,6 +488,33 @@ fn npm_lifecycle_preserves_optional_failures_bins_and_offline_remove() {
             .any(|edge| edge.omission == Some(npm::Omission::BuildFailure))
     );
     let receipt = &lock.builds[0];
+    assert!(
+        receipt
+            .inputs
+            .libs
+            .iter()
+            .any(|lib| lib.spec.name == "broken")
+    );
+    assert!(
+        receipt
+            .inputs
+            .libs
+            .iter()
+            .any(|lib| lib.spec.name == "cycle")
+    );
+    assert!(receipt.inputs.npm[0].build.is_none());
+    let cold = FixtureArtifactStore::default();
+    let before = lock.encode().unwrap();
+    dever_cli::libs::restore::restore_artifacts(
+        &lock,
+        &super::restore_tests::archives_only(&lock, &transport),
+        &cold,
+        &inputs,
+        &inputs.settings.runtime.target,
+        &dever_cli::libs::sumdb::Verifier::official(),
+    )
+    .unwrap();
+    assert_eq!(lock.encode().unwrap(), before);
     let bytes = store
         .verify_exact(
             &receipt.output.sha256,

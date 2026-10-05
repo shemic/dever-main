@@ -10,6 +10,14 @@ fn run() -> i32 {
     if arguments.as_slice() == ["--dever-bootstrap-health"] {
         return 0;
     }
+    if let [flag, config] = arguments.as_slice()
+        && flag == "--dever-extract"
+    {
+        return match dever_cli::toolchain::extract_config(std::path::Path::new(config)) {
+            Ok(()) => 0,
+            Err(error) => fail(error),
+        };
+    }
     #[cfg(target_os = "linux")]
     if let [flag, root] = arguments.as_slice()
         && flag == "--dever-install"

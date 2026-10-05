@@ -3,7 +3,7 @@ use dever_cli::toolchain::runtime_pack::RuntimePack;
 use dever_runtime::config::RuntimeProfile;
 
 #[cfg(target_arch = "x86_64")]
-fn cross_author() -> Author {
+pub(super) fn cross_author() -> Author {
     let mut author = Author::new();
     let target = BuildTarget::LinuxAarch64;
     let input = |name: &str, bytes: Vec<u8>| {
@@ -80,6 +80,12 @@ fn host_core_packages_both_native_targets_with_separate_profiles_and_signed_clos
                 manifest
                     .artifacts
                     .iter()
+                    .chain(
+                        manifest
+                            .extensions
+                            .iter()
+                            .flat_map(|extension| &extension.artifacts)
+                    )
                     .any(|artifact| artifact.path == input.path
                         && artifact.sha256 == input.sha256
                         && artifact.bytes == input.bytes)

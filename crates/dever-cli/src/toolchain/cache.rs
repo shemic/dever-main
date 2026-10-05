@@ -235,14 +235,33 @@ impl CacheStore {
     }
 
     pub fn artifact(&self, expected: &ArtifactReceipt) -> Result<StoredArtifact, String> {
+        self.artifact_optional(expected)?
+            .ok_or_else(|| "shared artifact unavailable: artifact is not cached".into())
+    }
+
+    pub fn artifact_optional(
+        &self,
+        expected: &ArtifactReceipt,
+    ) -> Result<Option<StoredArtifact>, String> {
         expected.validate()?;
         let operation = CacheOperation::acquire(&self.root)?;
+        let directory = self.root.join("artifacts");
+        for path in [&directory, &directory.join(&expected.sha256)] {
+            match fs::symlink_metadata(path) {
+                Ok(_) => {}
+                Err(error) if error.kind() == std::io::ErrorKind::NotFound => return Ok(None),
+                Err(error) => return Err(format!("cannot inspect shared artifact: {error}")),
+            }
+            if path == &directory {
+                ensure_real_directory(&directory)?;
+            }
+        }
         let file = self.read_artifact_file(expected)?;
-        Ok(StoredArtifact {
+        Ok(Some(StoredArtifact {
             receipt: expected.clone(),
             file,
             _operation: operation,
-        })
+        }))
     }
 
     fn read_artifact_file(&self, expected: &ArtifactReceipt) -> Result<File, String> {

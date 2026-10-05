@@ -12,7 +12,10 @@ use serde::Deserialize;
 use sha2::{Digest, Sha256};
 
 use super::runtime_pack::{self, Manifest, Profile, Profiles, RuntimeArtifact};
-use super::{Artifact, BuildTarget, ReleaseManifest, Version, sha256_file};
+use super::{
+    Artifact, BuildTarget, Extension, ExtensionKind, ReleaseManifest, Version, sha256_file,
+    validate_catalog,
+};
 
 static NEXT_STAGING: AtomicU64 = AtomicU64::new(0);
 
@@ -205,33 +208,71 @@ fn assemble(
             end: settings.end,
         },
     )?);
+    let mut extensions = Vec::new();
+    let mut target_artifacts = BTreeMap::new();
     for (target, inputs) in settings.native_targets {
-        artifacts.extend(assemble_native(&mut writer, &version, target, inputs)?);
+        target_artifacts.insert(
+            target,
+            assemble_native(&mut writer, &version, target, inputs)?,
+        );
     }
     for (ecosystem, input) in settings.runtimes.entries() {
-        artifacts.extend(ecosystems::assemble(&mut writer, ecosystem, input, host)?);
+        extensions.push(Extension {
+            kind: ExtensionKind::Runtime(ecosystem.clone()),
+            target: host,
+            artifacts: ecosystems::assemble(&mut writer, ecosystem, input, host)?,
+        });
     }
     for (target, inputs) in settings.ecosystem_targets {
         for (ecosystem, input) in inputs.entries() {
-            artifacts.extend(ecosystems::assemble(&mut writer, ecosystem, input, target)?);
+            extensions.push(Extension {
+                kind: ExtensionKind::Runtime(ecosystem.clone()),
+                target,
+                artifacts: ecosystems::assemble(&mut writer, ecosystem, input, target)?,
+            });
         }
     }
     if let Some(inputs) = settings.sandbox {
         artifacts.extend(sandbox::assemble(&mut writer, inputs, host)?);
     }
     for (target, inputs) in settings.sandbox_targets {
-        artifacts.extend(sandbox::assemble(&mut writer, inputs, target)?);
+        let selected = target_artifacts
+            .get_mut(&target)
+            .ok_or("target sandbox requires a matching native target")?;
+        selected.extend(sandbox::assemble(&mut writer, inputs, target)?);
+    }
+    for (target, artifacts) in target_artifacts {
+        extensions.push(Extension {
+            kind: ExtensionKind::Target,
+            target,
+            artifacts,
+        });
     }
     for (ecosystem, input) in settings.builds.entries() {
-        artifacts.extend(builds::assemble(&mut writer, ecosystem, input, host)?);
+        extensions.push(Extension {
+            kind: ExtensionKind::Build(ecosystem.clone()),
+            target: host,
+            artifacts: builds::assemble(&mut writer, ecosystem, input, host)?,
+        });
     }
     for (target, inputs) in settings.build_targets {
         for (ecosystem, input) in inputs.entries() {
-            artifacts.extend(builds::assemble(&mut writer, ecosystem, input, target)?);
+            extensions.push(Extension {
+                kind: ExtensionKind::Build(ecosystem.clone()),
+                target,
+                artifacts: builds::assemble(&mut writer, ecosystem, input, target)?,
+            });
         }
     }
     artifacts.sort_by(|left, right| left.path.cmp(&right.path));
-    let manifest = ReleaseManifest::new(version, artifacts);
+    for extension in &mut extensions {
+        extension
+            .artifacts
+            .sort_by(|left, right| left.path.cmp(&right.path));
+    }
+    let mut manifest = ReleaseManifest::new(version, artifacts);
+    manifest.extensions = extensions;
+    validate_catalog(&manifest)?;
     let bytes = write_metadata(&staging.join("manifest.json"), &manifest)?;
     let signature = key.pair.sign(&bytes);
     let hex: String = signature

@@ -245,6 +245,29 @@ fn package_add_resolves_transitive_versions_and_feeds_the_common_lib_lock() {
     assert!(String::from_utf8_lossy(&files["module/catalog/value/app.dever"]).contains("two"));
     assert!(execute_with("doctor", root.path(), &[], &registry, &store).is_ok());
 
+    let lock_before = fs::read(root.path().join("dever.lock")).unwrap();
+    let setting_before = fs::read(root.path().join("config/setting.json")).unwrap();
+    let archives_only = Registry(
+        registry
+            .0
+            .iter()
+            .filter(|(path, _)| path.ends_with(".zip"))
+            .map(|(path, bytes)| (path.clone(), bytes.clone()))
+            .collect(),
+    );
+    let restored = FixtureArtifactStore::default();
+    dever_cli::packages::restore_locked_with(root.path(), &lock, &archives_only, &restored)
+        .unwrap();
+    assert_eq!(owned_files_with(root.path(), &restored).unwrap(), files);
+    assert_eq!(
+        fs::read(root.path().join("dever.lock")).unwrap(),
+        lock_before
+    );
+    assert_eq!(
+        fs::read(root.path().join("config/setting.json")).unwrap(),
+        setting_before
+    );
+
     let mut damaged = lock.clone();
     damaged.packages[0].manifest_sha256 = "0".repeat(64);
     damaged.write_atomic(root.path()).unwrap();

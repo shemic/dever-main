@@ -128,6 +128,18 @@ impl Catalog<'_, '_> {
                 "npm archive cache exceeds its 256 MiB/package budget".into(),
             ));
         }
+        let locator = document
+            .get("dist")
+            .and_then(|dist| dist.get("tarball"))
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| SearchError::Fatal("npm tarball locator missing".into()))?;
+        let filename = locator
+            .split(['?', '#'])
+            .next()
+            .unwrap_or(locator)
+            .rsplit('/')
+            .next()
+            .ok_or_else(|| SearchError::Fatal("npm tarball filename missing".into()))?;
         let lib = self
             .resolver
             .lock_archive(
@@ -136,7 +148,11 @@ impl Catalog<'_, '_> {
                 self.runtime,
                 "tgz",
                 &bytes,
-                "npm-instances-v1",
+                Some(crate::libs::RegistrySource {
+                    ecosystem: Ecosystem::Npm,
+                    locator: locator.into(),
+                    filename: filename.into(),
+                }),
             )
             .map_err(SearchError::Fatal)?;
         self.archives.insert(spec.clone(), (lib, archive));

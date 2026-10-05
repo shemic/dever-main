@@ -358,6 +358,56 @@ fn install_release(layout: &Layout, version: &Version, key: &Ed25519KeyPair) {
     MachineManager::new(layout.clone())
         .install_requested(version.as_str())
         .unwrap();
+    // These opt-in whole-release fixtures explicitly prepare every declared resource.
+    // Product installation only installs the base; each preparation still exercises
+    // the ordinary signed extraction and immutable extension publication owner.
+    struct PreparedInputs(PathBuf);
+    impl dever_cli::toolchain::ExtensionSource for PreparedInputs {
+        fn open(
+            &self,
+            _version: &Version,
+            id: &dever_cli::toolchain::ExtensionId,
+        ) -> Result<Box<dyn std::io::Read>, String> {
+            let catalog: dever_cli::toolchain::ReleaseManifest = serde_json::from_slice(
+                &fs::read(self.0.join("manifest.json")).map_err(|error| error.to_string())?,
+            )
+            .map_err(|error| error.to_string())?;
+            let extension = catalog
+                .extensions
+                .iter()
+                .find(|extension| extension.id() == *id)
+                .ok_or("fixture extension is undeclared")?;
+            let mut encoder = zstd::stream::write::Encoder::new(Vec::new(), 1)
+                .map_err(|error| error.to_string())?;
+            encoder
+                .include_checksum(true)
+                .map_err(|error| error.to_string())?;
+            let mut archive = tar::Builder::new(encoder);
+            for artifact in &extension.artifacts {
+                let mut header = tar::Header::new_ustar();
+                header.set_size(artifact.bytes);
+                header.set_mode(0o644);
+                header.set_cksum();
+                let file = fs::File::open(self.0.join(&artifact.path))
+                    .map_err(|error| error.to_string())?;
+                archive
+                    .append_data(&mut header, &artifact.path, file)
+                    .map_err(|error| error.to_string())?;
+            }
+            let bytes = archive
+                .into_inner()
+                .map_err(|error| error.to_string())?
+                .finish()
+                .map_err(|error| error.to_string())?;
+            Ok(Box::new(std::io::Cursor::new(bytes)))
+        }
+    }
+    let resources = dever_cli::toolchain::SignedResources::load(layout, version).unwrap();
+    let source = PreparedInputs(layout.downloads().join(version.as_str()));
+    for extension in &resources.manifest().extensions {
+        dever_cli::toolchain::prepare_extension_with(layout, version, &extension.id(), &source)
+            .unwrap();
+    }
 }
 
 fn archive_report(workspace: &Path) -> Value {

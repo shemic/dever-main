@@ -142,7 +142,15 @@ pub(super) fn worker_compile(
             },
         ),
     };
-    let pack = RuntimePack::load(&compiler_directory()?, profile, request.target)?;
+    let (layout, version) =
+        managed_compiler()?.ok_or("compile worker requires a managed compiler")?;
+    let resources =
+        dever_cli::toolchain::SignedResources::load(&layout, &Version::parse(&version)?)?;
+    let root = resources.root(&format!(
+        "runtime/{}/manifest.json",
+        request.target.platform()
+    ))?;
+    let pack = RuntimePack::load(&root, profile, request.target)?;
     link_ir(&ir, &pack, build, output)
 }
 

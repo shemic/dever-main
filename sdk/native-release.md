@@ -6,7 +6,7 @@ Build the four runtime archives separately, then assemble and sign a new directo
 
 ## Build inputs
 
-Build the compiler with `cargo build --offline --locked -p dever-cli --bin dever`; its author input becomes the installed `dever-core`. Build the stable machine launcher with `--bin dever-launcher` and the daemon with `--bin deverd`. Use `target/debug/dever-launcher` for the bootstrap launcher input, which the maker publishes as `bootstrap/dever`. The installed public command remains `dever`; `dever-launcher` is only an author build name. Preserve this distinction when preparing release inputs.
+Build the compiler with `cargo build --release --offline --locked -p dever-cli --bin dever`; its author input becomes the installed `dever-core`. Build the stable machine launcher with `--bin dever-launcher` and the daemon with `--bin deverd` in the same release profile. Use `target/release/dever-launcher` for the bootstrap launcher input, which the maker publishes as `bootstrap/dever`. The release profile uses fat LTO, one codegen unit and symbol stripping; `runtime-pack` overrides stripping to retain linkable archive symbols. The installed public command remains `dever`; `dever-launcher` is only an author build name.
 
 Prepare the pinned Rust dependencies and compiler LLVM 18/LLD SDK explicitly. Use an explicitly selected Cargo/Rust toolchain for author builds. The root `runtime-pack` Cargo profile inherits the release optimization settings, uses one codegen unit and removes debug information while retaining archive symbols needed by LLD. It must not enable the bridge's `embedded` feature.
 
@@ -34,7 +34,7 @@ Prepare a matching compiler core, `libLLVM.so.18.1`, target CRT objects and genu
 
 ## Author settings
 
-Application authors select `dever build <project-root> --target linux-aarch64 --output <new-file>`; omitted targets, `run`, and `test` use the host. This selects application output, not an ARM compiler installation. Missing target packs are errors. Product commands do not discover cross tools or download packs while building.
+Application authors first prepare `dever target add linux-aarch64`, then select `dever build <project-root> --target linux-aarch64 --output <new-file>`; omitted targets, `run`, and `test` use the host. This selects application output, not an ARM compiler installation. Missing target packs are errors with a preparation command. Product commands do not discover cross tools or download packs while building.
 
 For an additional application target, add `native_targets.linux-aarch64` to the author settings. Its value has the same `profiles`, `start`, `libraries`, and `end` fields as the host inputs below. Build all four archives with Rust target `aarch64-unknown-linux-gnu` and an explicitly prepared cross linker/sysroot. Use ARM CRT and static libraries, never host files or linker scripts. Both standalone object and archive member ELF headers are checked against the declared target before publishing and on cache access.
 
@@ -96,7 +96,11 @@ Use a separate author root, not a Dever application's configuration. Place its e
 
 `dever skill path [project-root]` validates and returns the skill belonging to the selected compiler. `dever skill install <new-directory>` installs a small AI entry that resolves the active signed skill on each task. It refuses existing directories. `dever update` and `dever use` change the one active-version journal used by both core and skill; they do not rewrite every user's AI directory. Ordinary users can read the signed skill without the install lock or administrator permissions.
 
-Publish official versions to `shemic/dever-main` GitHub Releases with tag `v<version>`. `sdk/release-assets.py` converts the signed directory into three assets named `dever-<platform>.manifest.json`, `dever-<platform>.manifest.sig`, and `dever-<platform>.tar.gz`. The archive contains exactly the manifest's ordinary artifact files, with no directory headers or embedded manifest. The installer and explicit `dever install/update` download these assets, verify the independent pinned public key before payload extraction, and never use application configuration or environment variables for the official address. Project `run/build` remain offline.
+Publish official versions to `shemic/dever-main` GitHub Releases with tag `v<version>`. The v2 signed root catalog separates base `artifacts` from `extensions`. Base includes core/private libraries, bootstrap, host native profiles/sandbox and skill. Each extension declares `{kind,target,artifacts}`; `kind` is `{"type":"runtime","ecosystem":"pip|npm|go"}`, `{"type":"build","ecosystem":"pip|npm"}` or `{"type":"target"}`. Target combines that target's native profiles/CRT and sandbox. Paths and identities cannot overlap. No extension has an independent unsigned manifest or can override base files.
+
+`python3 sdk/release-assets.py <release> --output <new-assets> --zstd /absolute/author/zstd` writes `dever-<platform>.manifest.json`, `.manifest.sig`, `.tar.zst`, plus `.ext-<runtime-pip|runtime-npm|runtime-go|build-pip|build-npm|target>-<target>.tar.zst`. Each USTAR contains exactly its signed ordinary artifact files, no directory headers or embedded root metadata. Zstandard uses a checksummed single frame with a maximum 128 MiB window. The publisher also emits `.blob-<sha256>` for bootstrap/dever and every bootstrap/lib dependency. First installation authenticates these raw helpers before executing the launcher's bounded extractor; end users do not need a system zstd executable. Report helper bytes separately from base archive size.
+
+Only explicit install/update, target add and dependency preparation download official resources. The source address is compiled into the toolchain, not application configuration or environment variables. Extension preparation uses closed typed IPC and the existing machine service, storing immutable version/catalog-bound resources under `cache/extensions`. Multiple projects/users share one verified tree. `run/build` and resource reads never download. `update` prepares the new core/skill and the active version's already installed extension selection before publishing the active-version journal; failure keeps the old selection usable. The stable machine launcher/daemon are provisioned by bootstrap, so changes to that protocol require a matching trusted bootstrap installation.
 
 ## Linux first installation
 
@@ -234,13 +238,18 @@ The third command requires root and namespace permission for a test-owned mount 
 
 The harness rejects a dynamically linked init. Inside the already pivoted namespace, it replaces bwrap's proc submounts with a complete private proc mount so the nested Worker can mount its own proc. It keeps the outer root fixture's existing capabilities; the product's inner namespace, capability removal and guard remain unchanged. It never binds the host proc into the final root. This private compiler test complements the managed daemon test; it does not install a machine service.
 
-To accept an already prepared official release (including its real signing identity), use the owned-image verifier. `--assets` feeds the exact three download files through the real installer using local transport; signature checks, extraction and bootstrap execution are unchanged. It requires the explicit static bwrap/init fixtures described above, creates a new image, starts only its own daemon and records each passed stage. Online `dever update` and real-host service activation remain separate checks.
+To accept an already prepared official release (including its real signing identity), use the owned-image verifier. `--assets` feeds the exact split download files through the real installer using local transport; signature checks, extraction and bootstrap execution are unchanged. The `prepare-extensions` author example replaces only extension transport with actual local assets; it uses the product owner for validation and installation. Supply it with `--extension-helper` to exercise ARM preparation, CLI reuse and cross compilation. The verifier requires explicit static bwrap/init fixtures, creates a new image, starts only its own daemon and records each passed stage. Online update and real-host service activation remain separate checks.
 
 ```sh
 python3 -B test/onboarding/verify_prepared_release.py \
   --release /prepared/release --assets /prepared/download-assets \
+  --init /prepared/native-acceptance-init --extension-helper /prepared/prepare-extensions \
   --image /new/owned-image --report /owned-records/acceptance.json
 ```
+
+The image and its owned ancestor directories must be traversable by the two test UIDs (65533 and 65534). Their resource-reuse check starts a separate private-machine daemon with real kernel identities, because the minimal OS fixture's single-UID user namespace cannot represent another user. It does not touch the global service.
+
+`test/onboarding/verify_release_update.py` accepts the same asset/init/helper paths plus `--key <explicit-author-pkcs8>`. It re-signs the real payload catalog as an acceptance-only next version, verifies that a missing extension preserves the old working selection, then verifies that a successful update activates core/skill and exactly the installed extension set. That fixture version is never published; this is local update-transaction evidence, not an online Release acceptance.
 
 The existing fixture-based bootstrap regression additionally requires the built `dever` and `deverd` binaries:
 

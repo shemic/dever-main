@@ -121,8 +121,9 @@ fn sign_build_runtimes(
         for suffix in ["runtime.pack", "manifest.json"] {
             let name = format!("{prefix}/{suffix}");
             let artifact = manifest
-                .artifacts
+                .extensions
                 .iter_mut()
+                .flat_map(|extension| &mut extension.artifacts)
                 .find(|artifact| artifact.path == name)
                 .unwrap();
             artifact.bytes = fs::metadata(release.join(&name)).unwrap().len();
@@ -311,8 +312,9 @@ fn signed_ecosystems_build_and_run_without_system_language_installations() {
     for ecosystem in ECOSYSTEMS {
         let path = format!("runtime/{ecosystem}/linux-x86_64/runtime.pack");
         let artifact = signed
-            .artifacts
+            .extensions
             .iter()
+            .flat_map(|extension| &extension.artifacts)
             .find(|artifact| artifact.path == path)
             .unwrap();
         runtimes.insert(

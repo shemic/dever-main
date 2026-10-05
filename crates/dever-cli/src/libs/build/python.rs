@@ -8,8 +8,8 @@ use std::path::{Path, PathBuf};
 
 use super::{Product, PythonSystem, Receipt, Session, pack, process::Stage};
 use crate::libs::{
-    Ecosystem, LibSpec, LockFile, LockedArtifact, RegistryResolver, RegistryRuntime, archive_files,
-    sha256,
+    ArtifactStore, Ecosystem, LibSpec, LockFile, LockedArtifact, RegistryResolver, RegistryRuntime,
+    RegistrySource, archive_files, sha256,
 };
 use crate::workers::{python_wheel::Wheel, runtime};
 use serde_json::{Value, json};
@@ -23,6 +23,12 @@ struct Environment {
     descriptor: pack::Descriptor,
 }
 
+struct Execution<'a> {
+    store: &'a dyn ArtifactStore,
+    runtime: &'a RegistryRuntime,
+    inputs: &'a dyn super::Inputs,
+}
+
 struct Active<'a> {
     session: &'a Session<'a>,
     key: String,
@@ -34,12 +40,69 @@ impl Drop for Active<'_> {
 }
 
 impl Session<'_> {
+    pub(super) fn replay_python(
+        &self,
+        receipt: &Receipt,
+        store: &dyn ArtifactStore,
+    ) -> Result<Vec<u8>, String> {
+        let (runtime, _) = self.inputs.runtime(Ecosystem::Pip)?;
+        if runtime.pack != receipt.runtime || runtime.python_markers != receipt.python_markers {
+            return Err("locked Python build runtime or marker policy changed".into());
+        }
+        let environment = Environment::new(self, &runtime)?;
+        let execution = Execution {
+            store,
+            runtime: &runtime,
+            inputs: self.inputs,
+        };
+        if environment.descriptor != receipt.tools {
+            return Err("locked Python build tools changed".into());
+        }
+        let artifact = receipt
+            .sources
+            .first()
+            .ok_or("Python build source missing")?;
+        let origin = artifact
+            .source
+            .as_ref()
+            .ok_or("Python build source locator missing")?;
+        let bytes = store.verify_exact(&artifact.sha256, artifact.bytes, &artifact.target)?;
+        let source = source_files(&origin.filename, &bytes)?;
+        let system = receipt
+            .python
+            .as_ref()
+            .ok_or("Python build backend missing")?;
+        let empty = LockFile::new(vec![])?;
+        let inspected = environment.run(
+            &execution,
+            &empty,
+            &source,
+            json!({"phase":"inspect"}),
+            None,
+        )?;
+        let actual: PythonSystem =
+            serde_json::from_value(inspected.response).map_err(|error| error.to_string())?;
+        if &actual != system {
+            return Err("locked Python build backend configuration changed".into());
+        }
+        // The locked closure is final. Replaying never asks the resolver to
+        // discover or select static/dynamic build requirements again.
+        let (_, bytes) = environment.wheel(
+            &execution,
+            &receipt.inputs,
+            &source,
+            system,
+            receipt.roots.first().ok_or("Python build root missing")?,
+        )?;
+        Ok(bytes)
+    }
+
     pub(crate) fn python(
         &self,
         resolver: &RegistryResolver<'_>,
         spec: &LibSpec,
         runtime: &RegistryRuntime,
-        filename: &str,
+        source_origin: RegistrySource,
         source: &[u8],
     ) -> Result<Product, String> {
         let key = format!(
@@ -62,11 +125,21 @@ impl Session<'_> {
             session: self,
             key: key.clone(),
         };
-        let sources = source_files(filename, source)?;
+        let sources = source_files(&source_origin.filename, source)?;
         let environment = Environment::new(self, runtime)?;
+        let execution = Execution {
+            store: resolver.store,
+            runtime,
+            inputs: self.inputs,
+        };
         let empty = LockFile::new(vec![])?;
-        let inspected =
-            environment.run(resolver, &empty, &sources, json!({"phase":"inspect"}), None)?;
+        let inspected = environment.run(
+            &execution,
+            &empty,
+            &sources,
+            json!({"phase":"inspect"}),
+            None,
+        )?;
         let system: PythonSystem = serde_json::from_value(inspected.response)
             .map_err(|error| format!("invalid Python build configuration: {error}"))?;
         let mut requirements = system.requires.clone();
@@ -75,7 +148,7 @@ impl Session<'_> {
         let mut discovered = BTreeSet::new();
         for _ in 0..8 {
             let result = environment.run(
-                resolver,
+                &execution,
                 &dependencies,
                 &sources,
                 json!({"phase":"requires","system":system}),
@@ -99,38 +172,8 @@ impl Session<'_> {
             dependencies = next;
         }
         let dynamic = stable.ok_or("Python dynamic build requirements did not converge")?;
-        let metadata = environment.run(
-            resolver,
-            &dependencies,
-            &sources,
-            json!({"phase":"metadata","system":system}),
-            None,
-        )?;
-        let result = environment.run(
-            resolver,
-            &dependencies,
-            &sources,
-            json!({"phase":"wheel","system":system,"metadata":metadata.response.get("metadata")}),
-            Some(&metadata.outputs),
-        )?;
-        let filename = result
-            .response
-            .get("filename")
-            .and_then(Value::as_str)
-            .ok_or("build backend omitted wheel filename")?;
-        crate::workers::valid_path(filename)?;
-        if filename.contains('/') || !filename.ends_with(".whl") {
-            return Err("build backend returned invalid wheel filename".into());
-        }
-        let bytes = result
-            .outputs
-            .get(&format!("wheels/{filename}"))
-            .ok_or("build backend did not produce its declared wheel")?
-            .clone();
-        Wheel::parse(spec, Some(filename), &runtime.python_wheel_tags, &bytes)?;
-        if let Some(prefix) = metadata.response.get("metadata").and_then(Value::as_str) {
-            compare_metadata(prefix, &metadata.outputs, &bytes)?;
-        }
+        let (filename, bytes) =
+            environment.wheel(&execution, &dependencies, &sources, &system, spec)?;
         let output = artifact(
             runtime,
             format!(
@@ -140,11 +183,12 @@ impl Session<'_> {
             ),
             &bytes,
         );
-        let source_artifact = artifact(
+        let mut source_artifact = artifact(
             runtime,
             format!("build/source/{}/source", sha256(source)),
             source,
         );
+        source_artifact.source = Some(source_origin);
         for (artifact, bytes) in [(&output, bytes.as_slice()), (&source_artifact, source)] {
             if resolver.store.publish(bytes, &runtime.target)? != artifact.sha256 {
                 return Err("build artifact cache identity mismatch".into());
@@ -165,13 +209,13 @@ impl Session<'_> {
             frontend: super::frontend(&Ecosystem::Pip)?,
             python: Some(system),
             dynamic_requires: dynamic,
-            dependencies: Box::new(dependencies),
+            inputs: Box::new(dependencies),
             config_settings: BTreeMap::new(),
             output,
         };
         let product = Product {
             bytes,
-            filename: filename.into(),
+            filename,
             receipt,
         };
         self.remember(key, product.clone())?;
@@ -185,6 +229,7 @@ fn artifact(runtime: &RegistryRuntime, path: String, bytes: &[u8]) -> LockedArti
         path,
         bytes: bytes.len() as u64,
         sha256: sha256(bytes),
+        source: None,
     }
 }
 
@@ -236,6 +281,54 @@ struct ResultFiles {
 }
 
 impl Environment {
+    fn wheel(
+        &self,
+        execution: &Execution<'_>,
+        dependencies: &LockFile,
+        source: &Source,
+        system: &PythonSystem,
+        spec: &LibSpec,
+    ) -> Result<(String, Vec<u8>), String> {
+        let metadata = self.run(
+            execution,
+            dependencies,
+            source,
+            json!({"phase":"metadata","system":system}),
+            None,
+        )?;
+        let result = self.run(
+            execution,
+            dependencies,
+            source,
+            json!({"phase":"wheel","system":system,"metadata":metadata.response.get("metadata")}),
+            Some(&metadata.outputs),
+        )?;
+        let filename = result
+            .response
+            .get("filename")
+            .and_then(Value::as_str)
+            .ok_or("build backend omitted wheel filename")?;
+        crate::workers::valid_path(filename)?;
+        if filename.contains('/') || !filename.ends_with(".whl") {
+            return Err("build backend returned invalid wheel filename".into());
+        }
+        let bytes = result
+            .outputs
+            .get(&format!("wheels/{filename}"))
+            .ok_or("build backend did not produce its declared wheel")?
+            .clone();
+        Wheel::parse(
+            spec,
+            Some(filename),
+            &execution.runtime.python_wheel_tags,
+            &bytes,
+        )?;
+        if let Some(prefix) = metadata.response.get("metadata").and_then(Value::as_str) {
+            compare_metadata(prefix, &metadata.outputs, &bytes)?;
+        }
+        Ok((filename.into(), bytes))
+    }
+
     fn new(session: &Session<'_>, requested: &RegistryRuntime) -> Result<Self, String> {
         super::require_execution_target(&requested.target, "Python source build")?;
         let (runtime, bytes) = session.inputs.runtime(Ecosystem::Pip)?;
@@ -291,12 +384,17 @@ impl Environment {
 
     fn run(
         &self,
-        resolver: &RegistryResolver<'_>,
+        execution: &Execution<'_>,
         dependencies: &LockFile,
         source: &Source,
         mut request: Value,
         prepared: Option<&BTreeMap<String, Vec<u8>>>,
     ) -> Result<ResultFiles, String> {
+        let Execution {
+            store,
+            runtime,
+            inputs,
+        } = execution;
         let stage = Stage::new()?;
         let input = stage.0.join("input");
         for (path, (bytes, executable)) in &self.files {
@@ -322,10 +420,6 @@ impl Environment {
             }
         }
         let mut installed = BTreeMap::<String, Vec<u8>>::new();
-        let runtime = resolver
-            .runtimes
-            .get(&Ecosystem::Pip)
-            .ok_or("build dependency runtime is missing")?;
         let mut distributions = BTreeSet::new();
         for lib in &dependencies.libs {
             super::validate_python_policy(
@@ -342,10 +436,7 @@ impl Environment {
                 );
             }
             let artifact = &lib.artifacts[0];
-            let bytes =
-                resolver
-                    .store
-                    .verify_exact(&artifact.sha256, artifact.bytes, &artifact.target)?;
+            let bytes = store.verify_exact(&artifact.sha256, artifact.bytes, &artifact.target)?;
             let wheel = Wheel::parse(&lib.spec, None, &runtime.python_wheel_tags, &bytes)?;
             wheel.validate_dependencies(
                 lib,
@@ -432,9 +523,7 @@ impl Environment {
             "isolated Python build hook",
             &work,
         )?;
-        if let Some(session) = resolver.build {
-            session.inputs.diagnostic(&stage.diagnostics()?);
-        }
+        inputs.diagnostic(&stage.diagnostics()?);
         let outputs = output_files(&work.join("output"))?;
         let response = serde_json::from_slice(
             outputs

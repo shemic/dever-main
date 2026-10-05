@@ -182,7 +182,9 @@ external pip "worker/mail.py" {
 
 Go Worker 使用锁定的目标专用 build pack 内的 compiler、linker 和标准库离线编译。入口源码声明 `package main`，按操作名导出 `func(context.Context, any, any) (any, error)`：`send` 对应 `Send`，`text.render` 对应 `TextRender`；生成入口静态绑定函数并由 Go 编译器检查签名，不要求业务手写 `main` 或注册表。构建按目标 build tags 选文件，支持 `go:embed`，导入只能来自标准库、当前 Adapter 源码、SDK 或锁定的 Go module 闭包。构建产物只携带 Worker 可执行文件与 checked 合同，启动不寻找系统 Go。参与解析的 `go.mod` 和最终 module ZIP 均验证官方 sumdb 签名、包含证明与 Go `h1`；项目现有锁保存 checkpoint，一致性和反回滚以该锁为锚，主动删除锁会重新建立锚。
 
-`dever-lock-v5` 保存每个 Worker 的精确生态依赖。Python extras 使用规范化、排序后的 `pip:name[a,b]@version`，不同 Worker 不共享隐式 extras；实际选中 wheel 的 METADATA 决定依赖，原生 wheel 还必须符合签名解释器的 tags、扩展 ABI 和封闭动态库搜索规则。npm 保留每个安装实例的嵌套路径、peer 上下文、optional 省略原因和 bundled 归属，不能把不同依赖上下文压成一份全局版本表。
+`dever-lock-v6` 保存每个 Worker 的精确生态依赖，以及原始归档的准确来源和文件名。Python extras 使用规范化、排序后的 `pip:name[a,b]@version`，不同 Worker 不共享隐式 extras；实际选中 wheel 的 METADATA 决定依赖，原生 wheel 还必须符合签名解释器的 tags、扩展 ABI 和封闭动态库搜索规则。npm 保留每个安装实例的嵌套路径、peer 上下文、optional 省略原因和 bundled 归属，不能把不同依赖上下文压成一份全局版本表。
+
+`dever lib install <root>` 按已有锁恢复 Package、Lib 和必要运行环境，不重新选择版本，不改项目配置和锁文件。缺少构建产物时使用收据中的完整固定输入重放，并核对输出摘要；第三方构建不能重现相同字节时明确失败。运行环境和构建工具通过机器共享签名扩展按需准备，`run/build` 仍不联网。ARM 应用资源先用 `dever target add linux-aarch64` 准备。
 
 显式 `dever lib add/update` 可用签名 build pack 构建 PEP 517 sdist、执行 npm registry 包的 `preinstall/install/postinstall` 和原生 addon 编译。build pack 必须提供目标运行时、头文件、编译器、sysroot、固定 shell 和工具闭包；缺少的工具或库明确报错，不寻找宿主环境。Python 的静态与动态 build requirements 使用独立精确锁，console scripts 安装到隔离构建 prefix；metadata 与 wheel hook 分进程执行，最终 wheel 必须匹配父进程保存的 metadata。npm publishing hooks 不作为 registry 安装钩子执行，可选依赖构建失败会裁剪其不可用闭包，必需依赖失败则整个准备失败。
 

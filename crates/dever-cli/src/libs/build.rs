@@ -63,7 +63,7 @@ pub struct Receipt {
     pub frontend: String,
     pub python: Option<PythonSystem>,
     pub dynamic_requires: Vec<String>,
-    pub dependencies: Box<LockFile>,
+    pub inputs: Box<LockFile>,
     pub config_settings: BTreeMap<String, serde_json::Value>,
     pub output: LockedArtifact,
 }
@@ -90,6 +90,29 @@ pub struct Session<'a> {
 }
 
 impl<'a> Session<'a> {
+    pub(crate) fn replay(
+        &self,
+        receipt: &Receipt,
+        store: &dyn super::ArtifactStore,
+    ) -> Result<(), String> {
+        if receipt.frontend != frontend(&receipt.ecosystem)? {
+            return Err("locked build frontend differs from this toolchain".into());
+        }
+        let bytes = match receipt.ecosystem {
+            Ecosystem::Pip => self.replay_python(receipt, store)?,
+            Ecosystem::Npm => self.replay_npm(receipt, store)?,
+            Ecosystem::Go => return Err("Go source build receipts are unsupported".into()),
+        };
+        if bytes.len() as u64 != receipt.output.bytes
+            || super::sha256(&bytes) != receipt.output.sha256
+        {
+            return Err("fixed build replay is not byte reproducible: output differs from dever.lock; lock was not changed".into());
+        }
+        if store.publish(&bytes, &receipt.output.target)? != receipt.output.sha256 {
+            return Err("restored build cache identity mismatch".into());
+        }
+        Ok(())
+    }
     pub fn new(inputs: &'a dyn Inputs) -> Self {
         Self {
             inputs,
@@ -229,6 +252,9 @@ pub fn doctor(lock: &LockFile) -> Result<(), String> {
 }
 
 fn doctor_at(lock: &LockFile, depth: usize) -> Result<(), String> {
+    if lock.format != super::LOCK_FORMAT || lock.toolchain != super::TOOLCHAIN {
+        return Err("build input lock format or toolchain differs from this release".into());
+    }
     if depth > 16 {
         return Err("build dependency depth exceeds limit".into());
     }
@@ -361,7 +387,6 @@ fn doctor_at(lock: &LockFile, depth: usize) -> Result<(), String> {
             && (receipt.python.is_some()
                 || receipt.python_markers.is_some()
                 || !receipt.dynamic_requires.is_empty()
-                || !receipt.dependencies.libs.is_empty()
                 || receipt.graph.is_none())
         {
             return Err("npm build receipt contains Python backend state".into());
@@ -372,20 +397,50 @@ fn doctor_at(lock: &LockFile, depth: usize) -> Result<(), String> {
         if let Some(system) = &receipt.python {
             validate_requirements(receipt, system)?;
         }
-        if !receipt.dependencies.workers.is_empty()
-            || !receipt.dependencies.packages.is_empty()
+        if !receipt.inputs.workers.is_empty()
+            || !receipt.inputs.packages.is_empty()
             || receipt
-                .dependencies
+                .inputs
                 .libs
                 .iter()
-                .any(|lib| lib.spec.ecosystem != Ecosystem::Pip)
+                .any(|lib| lib.spec.ecosystem != receipt.ecosystem)
         {
-            return Err("build dependency closure is not a separate Python environment".into());
+            return Err("build input closure contains unrelated environments".into());
         }
-        doctor_at(&receipt.dependencies, depth + 1)?;
+        if receipt.output.source.is_some()
+            || receipt.sources.iter().any(|source| {
+                source
+                    .source
+                    .as_ref()
+                    .is_none_or(|origin| origin.ecosystem != receipt.ecosystem)
+            })
+        {
+            return Err("build receipt lacks exact registry source identity".into());
+        }
+        if receipt.ecosystem == Ecosystem::Npm {
+            let mut sources = receipt
+                .inputs
+                .libs
+                .iter()
+                .flat_map(|lib| lib.artifacts.clone())
+                .collect::<Vec<_>>();
+            sources.sort();
+            sources.dedup();
+            if sources != receipt.sources
+                || receipt.inputs.npm.len() != 1
+                || receipt.inputs.npm[0].roots != receipt.roots
+                || receipt.inputs.npm[0].build.is_some()
+                || !receipt.inputs.builds.is_empty()
+            {
+                return Err("npm build input graph differs from its original sources".into());
+            }
+        } else if receipt.sources.len() != 1 || !receipt.inputs.npm.is_empty() {
+            return Err("Python build receipt has invalid source inputs".into());
+        }
+        doctor_at(&receipt.inputs, depth + 1)?;
         // Full graph checks belong to the ordinary lock owner; recursion is
         // bounded above before invoking that owner on a dependency lock.
-        let mut dependencies = (*receipt.dependencies).clone();
+        let mut dependencies = (*receipt.inputs).clone();
         dependencies.builds.clear();
         for lib in &mut dependencies.libs {
             lib.build = None;
@@ -447,7 +502,7 @@ fn validate_requirements(receipt: &Receipt, system: &PythonSystem) -> Result<(),
     let document = serde_json::json!({"info":{"requires_dist":requirements}});
     let expected = super::python_dependencies(&document, markers, &[])?;
     let libraries = receipt
-        .dependencies
+        .inputs
         .libs
         .iter()
         .map(|lib| (lib.spec.name.as_str(), lib))

@@ -48,12 +48,15 @@ target/debug/examples/native-release <author-root> --output <new-release-directo
 ```bash
 dever lib add <project-root> pip:fixture@1.0.0
 dever lib list <project-root>
+dever lib install <project-root>
 dever lib doctor <project-root>
 dever lib update <project-root>
 dever lib remove <project-root> pip:fixture@1.0.0
 ```
 
-当前仓库已接入 PyPI、npm registry 和 Go proxy 解析、校验下载及机器共享缓存。真实 provider 只从已验证的机器发行目录读取签名 runtime 描述和 pack；开发态缺少发行资产时明确报错，不使用宿主语言环境。v5 锁绑定 Worker 合同、Python extras、npm 嵌套实例和 Go sumdb 证据；不同 Worker 独立解析依赖。显式 Lib 准备可使用签名工具包构建 PEP 517 sdist、执行 npm 安装钩子及原生 addon 编译，源码、工具、构建依赖和产物统一绑定到收据；`run/build` 只复用已锁定输出。SDK 自动绑定 Port 同名操作并校验输入、结果与错误，见 `sdk/README.md` 和 `LANGUAGE.md`。Go Worker 使用锁定工具离线编译/链接，支持目标文件选择与 `go:embed`，启动不需要系统 Go。
+当前仓库已接入 PyPI、npm registry 和 Go proxy 解析、校验下载及机器共享缓存。真实 provider 只从已验证的机器资源读取签名 runtime 描述和 pack；缺少资源明确报错，不使用宿主语言环境。v6 锁绑定 Worker 合同、Python extras、npm 嵌套实例、Go sumdb 证据、准确源文件与完整构建输入。`lib install` 按已有锁恢复，配置和锁文件字节不变；第三方构建无法重现锁定摘要时明确失败。不同 Worker 独立解析依赖。显式 Lib 准备可使用签名工具包构建 PEP 517 sdist、执行 npm 安装钩子及原生 addon 编译；`run/build` 只复用已锁定输出。SDK 自动绑定 Port 同名操作并校验输入、结果与错误，见 `sdk/README.md` 和 `LANGUAGE.md`。Go Worker 使用锁定工具离线编译/链接，支持目标文件选择与 `go:embed`，启动不需要系统 Go。
+
+发行包分为基础包和可选扩展。基础包保留 Dever 编译器、本机四种数据库运行库和配套 skill；Python/Node/Go 由 `lib add/update/install` 按实际需要准备，源码构建路径再准备构建工具。`dever target add linux-aarch64` 准备 ARM 应用目标。同版本资源在机器上共享，普通 `run/build` 不下载；`dever update` 更新核心、skill 和当前已安装的扩展，全部准备成功后才切换活动版本。基础与扩展均采用 Zstandard，首装无需系统 zstd。
 
 原生制作器已支持 Python/Node/Go runtime/build pack 的确定性打包与统一签名；Linux x86_64 三生态的签名安装、受管 `check/run/build` 和移除源码/机器目录后的无系统语言独立执行已通过，包含 Python/Node 原生依赖。Python sdist/extras/原生扩展、npm 高级依赖/安装钩子/native addon 和 Go sumdb 均已有实现及真实第三方依赖定向证据。Linux 签名首装、升级保护和两个项目/真实用户共享核心也已通过自有完整验收。Linux Worker 使用 OS 沙箱；当前 root 验收不代表受限 AppArmor 下非 root 部署通过。输入仍是私有作者资产和临时签名，尚未交付公开首次安装包或其他平台发行。具体流程见 [原生发行包制作流程](sdk/native-release.md)。
 

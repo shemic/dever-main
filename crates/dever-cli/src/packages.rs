@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use url::Url;
 
-use crate::libs::{self, ArtifactStore, LibSpec};
+use crate::libs::{self, ArtifactStore, LibSpec, LockFile};
 
 const INDEX_FORMAT: &str = "dever-package-index-v1";
 const MANIFEST_FORMAT: &str = "dever-package-v1";
@@ -404,6 +404,64 @@ fn settings(project_root: &Path) -> Result<(String, Vec<PackageRequest>), String
         }
         None => Ok((String::new(), Vec::new())),
     }
+}
+
+pub(crate) fn restore_locked(
+    project_root: &Path,
+    lock: &LockFile,
+    store: &dyn ArtifactStore,
+) -> Result<(), String> {
+    let (origin, roots) = settings(project_root)?;
+    validate_locked_roots(&roots, &lock.packages)?;
+    if lock.packages.is_empty() {
+        return Ok(());
+    }
+    restore_locked_with(
+        project_root,
+        lock,
+        &HttpPackageTransport::new(&origin)?,
+        store,
+    )
+}
+
+/// Exact Package archives are restored before source/Worker checking. No index
+/// is consulted: both dependency versions and archive identities are locked.
+pub fn restore_locked_with(
+    project_root: &Path,
+    lock: &LockFile,
+    transport: &dyn PackageTransport,
+    store: &dyn ArtifactStore,
+) -> Result<(), String> {
+    validate_locked_roots(&settings(project_root)?.1, &lock.packages)?;
+    for package in &lock.packages {
+        let cached = store.get_exact(&package.sha256, package.bytes, "package")?;
+        let missing = cached.is_none();
+        let bytes = match cached {
+            Some(bytes) => bytes,
+            None => transport.get(
+                &format!("/v1/packages/{}/{}.zip", package.name, package.version),
+                package.bytes as usize,
+            )?,
+        };
+        if bytes.len() as u64 != package.bytes || digest(&bytes) != package.sha256 {
+            return Err(format!(
+                "Package {}@{} differs from dever.lock",
+                package.name, package.version
+            ));
+        }
+        let archive = manifest(&bytes, &package.name, &package.version)?;
+        if archive.manifest_sha256 != package.manifest_sha256 {
+            return Err(format!(
+                "Package {} manifest differs from dever.lock",
+                package.name
+            ));
+        }
+        if missing && store.publish(&bytes, "package")? != package.sha256 {
+            return Err("restored Package cache identity mismatch".into());
+        }
+    }
+    owned_files_with(project_root, store)?;
+    Ok(())
 }
 
 #[derive(Clone)]
@@ -1169,7 +1227,12 @@ fn execute_locked(
                 resolve_with(&roots, transport, store)?
             };
             check_project_collisions(project_root, &closure.packages, store)?;
-            let workers = libs::source_workers_with_packages(
+            let worker_loader = if command == "remove" {
+                libs::source_workers_with_packages
+            } else {
+                libs::prepare_source_workers_with_packages
+            };
+            let workers = worker_loader(
                 project_root,
                 &closure.sources,
                 crate::toolchain::BuildTarget::host()?,

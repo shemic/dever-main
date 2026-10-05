@@ -18,6 +18,10 @@ use sha2::{Digest, Sha256};
 
 static NEXT_TEMPORARY: AtomicU64 = AtomicU64::new(0);
 
+#[cfg(unix)]
+#[path = "shared_toolchain_extensions.rs"]
+mod extensions;
+
 struct TemporaryDirectory(PathBuf);
 
 impl TemporaryDirectory {

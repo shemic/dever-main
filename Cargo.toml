@@ -3,7 +3,7 @@ members = ["crates/dever-core", "crates/dever-runtime", "crates/dever-cli", "cra
 resolver = "3"
 
 [workspace.package]
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 rust-version = "1.95"
 publish = false
@@ -46,6 +46,7 @@ chrono = { version = "=0.4.45", default-features = false, features = ["std"] }
 [profile.release]
 codegen-units = 1
 lto = "fat"
+strip = "symbols"
 
 # Static archives retain linkable symbols; final program stripping belongs to LLD.
 [profile.runtime-pack]

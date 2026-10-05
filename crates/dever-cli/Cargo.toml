@@ -28,6 +28,7 @@ base64 = "=0.22.1"
 zip = { version = "=2.4.2", default-features = false, features = ["deflate"] }
 tar = { version = "=0.4.44", default-features = false }
 flate2 = "=1.1.5"
+zstd = { version = "=0.13.3", default-features = false }
 csv = "=1.4.0"
 goblin = { version = "=0.10.7", default-features = false, features = ["elf32", "elf64", "endian_fd", "std"] }
 
@@ -68,6 +69,11 @@ test = false
 [[example]]
 name = "native-acceptance-init"
 path = "../../test/dever-cli-tests/support/native_acceptance_init.rs"
+test = false
+
+[[example]]
+name = "prepare-extensions"
+path = "../../test/onboarding/prepare_extensions.rs"
 test = false
 
 [[test]]

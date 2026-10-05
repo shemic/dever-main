@@ -18,7 +18,7 @@ mod worker;
 #[path = "../../../test/dever-cli-tests/build_arguments.rs"]
 mod build_arguments;
 
-const USAGE: &str = "Usage:\n  dever check <project-root>\n  dever api <project-root> [--output <new-file>]\n  dever fmt <project-root> [--check]\n  dever test <project-root>\n  dever run <project-root> [-- <component>.<domain>.<cmd> '<json-object>']\n  dever run <project-root> --tenant <positive-tenant-id> -- <component>.<domain>.<cmd> '<json-object>'\n  dever build <project-root> --output <new-file> [--target linux-x86_64|linux-aarch64]\n  dever clean <project-root>\n  dever tenant migrate <project-root> <positive-tenant-id>\n  dever tenant owner <project-root> <positive-tenant-id> <site> <positive-user-id>\n  dever tenant component enable <project-root> <positive-tenant-id> <component>\n  dever tenant component disable <project-root> <positive-tenant-id> <component>\n  dever lib add|list|update|remove|doctor <project-root> [--target linux-x86_64|linux-aarch64] [spec ...]\n  dever package add|list|update|remove|doctor <project-root> [spec ...]\n\nApplications use API, Job, and CMD declarations under module/ and config/setting.json. Native builds and tests are offline.";
+const USAGE: &str = "Usage:\n  dever check <project-root>\n  dever api <project-root> [--output <new-file>]\n  dever fmt <project-root> [--check]\n  dever test <project-root>\n  dever run <project-root> [-- <component>.<domain>.<cmd> '<json-object>']\n  dever run <project-root> --tenant <positive-tenant-id> -- <component>.<domain>.<cmd> '<json-object>'\n  dever build <project-root> --output <new-file> [--target linux-x86_64|linux-aarch64]\n  dever clean <project-root>\n  dever tenant migrate <project-root> <positive-tenant-id>\n  dever tenant owner <project-root> <positive-tenant-id> <site> <positive-user-id>\n  dever tenant component enable <project-root> <positive-tenant-id> <component>\n  dever tenant component disable <project-root> <positive-tenant-id> <component>\n  dever lib add|install|list|update|remove|doctor <project-root> [--target linux-x86_64|linux-aarch64] [spec ...]\n  dever package add|list|update|remove|doctor <project-root> [spec ...]\n\nApplications use API, Job, and CMD declarations under module/ and config/setting.json. Native builds and tests are offline.";
 
 enum Action {
     Check,
@@ -435,7 +435,7 @@ fn arguments_for(arguments: &[OsString]) -> Result<(PathBuf, Action), String> {
             if command == "lib"
                 && matches!(
                     operation.to_str(),
-                    Some("add" | "list" | "update" | "remove" | "doctor")
+                    Some("add" | "install" | "list" | "update" | "remove" | "doctor")
                 ) =>
         {
             let command = operation.to_str().unwrap().to_owned();

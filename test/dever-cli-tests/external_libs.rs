@@ -30,6 +30,8 @@ mod native_elf;
 mod npm_build_tests;
 #[path = "external_libs/npm.rs"]
 mod npm_tests;
+#[path = "external_libs/restore.rs"]
+mod restore_tests;
 #[path = "external_libs/sumdb.rs"]
 mod sumdb_tests;
 #[path = "support/wheel.rs"]
@@ -1694,6 +1696,7 @@ fn expanded_worker_resources_keep_archives_needed_by_exec_or_declarations() {
             .collect(),
         runtime: registry_runtime(spec.ecosystem.clone()).pack,
         artifacts: vec![LockedArtifact {
+            source: None,
             target: target.clone(),
             path: path(spec),
             bytes: 1,

@@ -5,7 +5,7 @@ use std::process::Command;
 
 use super::release::{Layout, MachineManager, Version, platform_contract};
 
-const USAGE: &str = "Usage:\n  dever install <version|latest>\n  dever update\n  dever use <version>\n  dever uninstall <version>\n  dever version [project-root]\n  dever cache status\n  dever cache clean\n  dever lib add|list|update|remove|doctor <project-root> [--target linux-x86_64|linux-aarch64] [spec ...]\n  dever package add|list|update|remove|doctor <project-root> [spec ...]\n  dever check <project-root>\n  dever api <project-root> [--output <new-file>]\n  dever fmt <project-root> [--check]\n  dever test <project-root>\n  dever run <project-root> [-- <component>.<domain>.<cmd> '<json-object>']\n  dever build <project-root> --output <new-file> [--target linux-x86_64|linux-aarch64]\n  dever clean <project-root>\n  dever tenant ...";
+const USAGE: &str = "Usage:\n  dever install <version|latest>\n  dever update\n  dever target add linux-aarch64\n  dever use <version>\n  dever uninstall <version>\n  dever version [project-root]\n  dever cache status\n  dever cache clean\n  dever lib add|list|update|install|remove|doctor <project-root> [--target linux-x86_64|linux-aarch64] [spec ...]\n  dever package add|list|update|remove|doctor <project-root> [spec ...]\n  dever check <project-root>\n  dever api <project-root> [--output <new-file>]\n  dever fmt <project-root> [--check]\n  dever test <project-root>\n  dever run <project-root> [-- <component>.<domain>.<cmd> '<json-object>']\n  dever build <project-root> --output <new-file> [--target linux-x86_64|linux-aarch64]\n  dever clean <project-root>\n  dever tenant ...";
 
 #[derive(Debug)]
 pub enum CommandResult {
@@ -30,6 +30,20 @@ pub fn execute_in(layout: &Layout, arguments: &[OsString]) -> Result<CommandResu
     super::bootstrap::require_no_pending(layout)?;
     let manager = MachineManager::new(layout.clone());
     match arguments {
+        [command, operation, target] if command == "target" && operation == "add" => {
+            let target = utf8(target, "target")?.parse::<super::BuildTarget>()?;
+            if target != super::BuildTarget::LinuxAarch64 {
+                return Err("target add supports linux-aarch64".into());
+            }
+            let version = manager
+                .active_version()?
+                .ok_or("no active Dever version; run 'dever install latest'")?;
+            super::ensure_extension(layout, &version, super::ExtensionKind::Target, target)?;
+            Ok(CommandResult::Message(format!(
+                "prepared {} for Dever {version}",
+                target.platform()
+            )))
+        }
         [command, requested] if command == "install" => {
             let requested = utf8(requested, "version")?;
             super::release_source::prepare(layout, requested)?;

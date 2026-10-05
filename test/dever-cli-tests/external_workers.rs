@@ -262,6 +262,7 @@ fn fixture_for_target(
             dependencies: vec![],
             runtime: runtime.clone(),
             artifacts: vec![LockedArtifact {
+                source: None,
                 target: target.into(),
                 path: path.clone(),
                 bytes: bytes.len() as u64,
@@ -794,6 +795,7 @@ fn run_native_python_fixture(fixture: &str) {
         dependencies: vec![],
         runtime: runtime.clone(),
         artifacts: vec![LockedArtifact {
+            source: None,
             target: dever_cli::toolchain::platform_identity(),
             path: probe_path.clone(),
             bytes: probe.len() as u64,

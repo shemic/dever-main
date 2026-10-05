@@ -3,7 +3,7 @@ use super::*;
 use dever_cli::libs::{
     self, LibSpec, LockFile, LockedArtifact, LockedLib, LockedWorker, RegistryRuntime,
 };
-use dever_cli::toolchain::{Artifact, ReleaseManifest};
+use dever_cli::toolchain::{Artifact, Extension, ExtensionKind, ReleaseManifest};
 use dever_core::hir::ExternalWorkerContract;
 use sha2::{Digest, Sha256};
 use std::collections::BTreeMap;
@@ -68,6 +68,7 @@ fn sign_target_runtimes(
             serde_json::to_vec(&json!({"format":"dever-registry-runtime-v1","runtime":runtime}))
                 .unwrap(),
         );
+        let mut artifacts = Vec::new();
         for leaf in ["manifest.json", "runtime.pack"] {
             let path = format!("{prefix}/{leaf}");
             assert!(
@@ -76,17 +77,21 @@ fn sign_target_runtimes(
                     .iter()
                     .any(|artifact| artifact.path == path)
             );
-            manifest.artifacts.push(Artifact {
+            artifacts.push(Artifact {
                 bytes: fs::metadata(release.join(&path)).unwrap().len(),
                 sha256: sha256_file(&release.join(&path)).unwrap(),
                 path,
             });
         }
+        manifest.extensions.push(Extension {
+            kind: ExtensionKind::Runtime(ecosystem.parse().unwrap()),
+            target: TARGET,
+            artifacts,
+        });
         runtimes.insert(ecosystem.to_owned(), runtime);
     }
-    manifest
-        .artifacts
-        .sort_by(|left, right| left.path.cmp(&right.path));
+    manifest.extensions.sort_by_key(Extension::id);
+    dever_cli::toolchain::validate_catalog(&manifest).unwrap();
     let encoded = serde_json::to_vec(&manifest).unwrap();
     fs::write(release.join("manifest.json"), &encoded).unwrap();
     fs::write(
@@ -167,6 +172,7 @@ fn pure_package_lock(
     .unwrap();
     let sha256 = digest(&bytes);
     let artifact = LockedArtifact {
+        source: None,
         target: TARGET.platform().into(),
         path: format!(
             "lib/{}/{}/{}/archive.{extension}",

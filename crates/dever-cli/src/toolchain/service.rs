@@ -101,7 +101,13 @@ enum Operation {
     Clean,
     ArtifactPut(ArtifactReceipt),
     ArtifactGet(ArtifactReceipt),
-    Compile { bytes: u64 },
+    EnsureExtension {
+        version: Version,
+        extension: super::ExtensionId,
+    },
+    Compile {
+        bytes: u64,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -325,6 +331,15 @@ pub fn artifact_put(layout: &Layout, bytes: &[u8]) -> Result<ArtifactReceipt, St
 }
 
 pub fn artifact_get(layout: &Layout, sha256: &str, bytes: u64) -> Result<Vec<u8>, String> {
+    artifact_get_optional(layout, sha256, bytes)?
+        .ok_or_else(|| "shared artifact unavailable: artifact is not cached".into())
+}
+
+pub fn artifact_get_optional(
+    layout: &Layout,
+    sha256: &str,
+    bytes: u64,
+) -> Result<Option<Vec<u8>>, String> {
     let expected = ArtifactReceipt {
         sha256: sha256.to_owned(),
         bytes,
@@ -341,7 +356,11 @@ pub fn artifact_get(layout: &Layout, sha256: &str, bytes: u64) -> Result<Vec<u8>
                 installed: Vec::new(),
             },
         )?;
-        require_artifact(read_frame(&mut stream)?, &expected)?;
+        let response: Response = read_frame(&mut stream)?;
+        if response.ok && response.artifact.is_none() {
+            return Ok(None);
+        }
+        require_artifact(response, &expected)?;
         let mut bytes = vec![0; expected.bytes as usize];
         stream
             .read_exact(&mut bytes)
@@ -349,12 +368,36 @@ pub fn artifact_get(layout: &Layout, sha256: &str, bytes: u64) -> Result<Vec<u8>
         if hex(&Sha256::digest(&bytes)) != expected.sha256 {
             return Err("deverd artifact download failed SHA-256 verification".into());
         }
-        Ok(bytes)
+        Ok(Some(bytes))
     }
     #[cfg(not(unix))]
     {
         let _ = layout;
         Err("deverd artifact IPC is not implemented for this platform".into())
+    }
+}
+
+pub fn ensure_extension(
+    layout: &Layout,
+    version: &Version,
+    kind: super::ExtensionKind,
+    target: super::BuildTarget,
+) -> Result<(), String> {
+    Version::parse(version.as_str())?;
+    let response = request(
+        layout,
+        Operation::EnsureExtension {
+            version: version.clone(),
+            extension: super::ExtensionId { kind, target },
+        },
+        &[],
+    )?;
+    if response.ok {
+        Ok(())
+    } else {
+        Err(response
+            .error
+            .unwrap_or_else(|| "extension preparation failed".into()))
     }
 }
 
@@ -418,6 +461,11 @@ fn request(
     #[cfg(unix)]
     {
         let (mut stream, token) = connect(layout)?;
+        if matches!(operation, Operation::EnsureExtension { .. }) {
+            stream
+                .set_read_timeout(Some(std::time::Duration::from_secs(620)))
+                .map_err(|error| error.to_string())?;
+        }
         let request = Request {
             token,
             operation,
@@ -513,8 +561,16 @@ fn handle(
             };
         }
         Operation::ArtifactGet(expected) => {
-            let mut artifact = match store.artifact(&expected) {
-                Ok(artifact) => artifact,
+            let mut artifact = match store.artifact_optional(&expected) {
+                Ok(Some(artifact)) => artifact,
+                Ok(None) => {
+                    return Response {
+                        ok: true,
+                        status: None,
+                        artifact: None,
+                        error: None,
+                    };
+                }
                 Err(error) => return failure(error),
             };
             if let Err(error) = write_frame(stream, &artifact_response(artifact.receipt)) {
@@ -528,6 +584,17 @@ fn handle(
                 status: None,
                 artifact: None,
                 error: None,
+            };
+        }
+        Operation::EnsureExtension { version, extension } => {
+            return match super::extensions::ensure(layout, &version, &extension) {
+                Ok(()) => Response {
+                    ok: true,
+                    status: None,
+                    artifact: None,
+                    error: None,
+                },
+                Err(error) => failure(error),
             };
         }
         Operation::Compile { bytes } => {

@@ -10,7 +10,7 @@ pub(crate) struct ProjectMutation {
 
 impl ProjectMutation {
     pub(crate) fn for_command(command: &str, root: &Path) -> Result<Option<Self>, String> {
-        if !matches!(command, "add" | "update" | "remove") {
+        if !matches!(command, "add" | "update" | "remove" | "install") {
             return Ok(None);
         }
         let directory = fs::symlink_metadata(root)

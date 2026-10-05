@@ -19,7 +19,7 @@ pub mod sumdb;
 
 use super::{
     ArtifactStore, Ecosystem, LibResolver, LibSpec, LockFile, LockedArtifact, LockedDependency,
-    LockedLib, ProviderManifest, RuntimePack, sha256, validate_artifact,
+    LockedLib, ProviderManifest, RegistrySource, RuntimePack, sha256, validate_artifact,
 };
 
 const MAX_METADATA_BYTES: usize = 16 * 1024 * 1024;
@@ -553,7 +553,7 @@ impl RegistryResolver<'_> {
                     runtime,
                     "whl",
                     &candidate.bytes,
-                    "pypi-wheel-v1",
+                    candidate.source.clone(),
                 )?;
                 lib.build = candidate.build.clone();
                 distributions.insert(base.to_owned(), lib.clone());
@@ -925,6 +925,11 @@ impl RegistryResolver<'_> {
         }
         Ok(Some(PythonCandidate {
             build: None,
+            source: Some(RegistrySource {
+                ecosystem: Ecosystem::Pip,
+                locator: url.into(),
+                filename: field(file, "filename")?.into(),
+            }),
             bytes,
             info: serde_json::json!({"requires_dist":wheel.requirements,"provides_extra":wheel.extras}),
         }))
@@ -965,7 +970,17 @@ impl RegistryResolver<'_> {
         if sha256(&bytes) != expected {
             return Err("PyPI source SHA-256 mismatch".into());
         }
-        let product = session.python(self, spec, runtime, field(file, "filename")?, &bytes)?;
+        let product = session.python(
+            self,
+            spec,
+            runtime,
+            RegistrySource {
+                ecosystem: Ecosystem::Pip,
+                locator: field(file, "url")?.into(),
+                filename: field(file, "filename")?.into(),
+            },
+            &bytes,
+        )?;
         let wheel = crate::workers::python_wheel::Wheel::parse(
             spec,
             Some(&product.filename),
@@ -980,6 +995,7 @@ impl RegistryResolver<'_> {
         }
         Ok(Some(PythonCandidate {
             bytes: product.bytes,
+            source: None,
             info: serde_json::json!({"requires_dist":wheel.requirements,"provides_extra":wheel.extras}),
             build: Some(product.receipt.identity()?),
         }))
@@ -1012,7 +1028,7 @@ impl RegistryResolver<'_> {
         runtime: &RegistryRuntime,
         extension: &str,
         bytes: &[u8],
-        schema: &str,
+        source: Option<RegistrySource>,
     ) -> Result<LockedLib, String> {
         let files = archive_files(extension, bytes)?;
         if spec.ecosystem == Ecosystem::Go {
@@ -1035,6 +1051,7 @@ impl RegistryResolver<'_> {
             path,
             bytes: bytes.len() as u64,
             sha256: sha256(bytes),
+            source,
         };
         validate_artifact(&artifact)?;
         let published = self.store.publish(bytes, &runtime.target)?;
@@ -1052,7 +1069,12 @@ impl RegistryResolver<'_> {
             dependencies,
             runtime: runtime.pack.clone(),
             artifacts: vec![artifact],
-            schema: schema.into(),
+            schema: match spec.ecosystem {
+                Ecosystem::Pip => "pypi-wheel-v1",
+                Ecosystem::Npm => "npm-instances-v1",
+                Ecosystem::Go => "go-sumdb-v1",
+            }
+            .into(),
             build: None,
         })
     }
@@ -1126,7 +1148,22 @@ impl RegistryResolver<'_> {
                             MAX_ARTIFACT_BYTES,
                         )?;
                         sumdb.verify_zip(name, version, &zip)?;
-                        self.lock_archive(&spec, dependencies, runtime, "zip", &zip, "go-sumdb-v1")
+                        self.lock_archive(
+                            &spec,
+                            dependencies,
+                            runtime,
+                            "zip",
+                            &zip,
+                            Some(RegistrySource {
+                                ecosystem: Ecosystem::Go,
+                                locator: format!(
+                                    "/{}/@v/v{}.zip",
+                                    go_path(name),
+                                    version.trim_start_matches('v')
+                                ),
+                                filename: format!("v{}.zip", version.trim_start_matches('v')),
+                            }),
+                        )
                     })
                     .collect::<Result<Vec<_>, String>>()?;
                 return Ok((libs, sumdb.finish()));
@@ -1179,6 +1216,7 @@ struct PythonCandidate {
     bytes: Vec<u8>,
     info: Value,
     build: Option<String>,
+    source: Option<RegistrySource>,
 }
 
 struct SearchState<'a> {

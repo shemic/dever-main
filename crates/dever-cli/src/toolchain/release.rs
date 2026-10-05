@@ -74,15 +74,17 @@ pub struct ReleaseManifest {
     pub version: Version,
     pub platform: String,
     pub artifacts: Vec<Artifact>,
+    pub extensions: Vec<super::extensions::Extension>,
 }
 
 impl ReleaseManifest {
     pub fn new(version: Version, artifacts: Vec<Artifact>) -> Self {
         Self {
-            format: "dever-release-v1".into(),
+            format: "dever-release-v2".into(),
             version,
             platform: platform_identity(),
             artifacts,
+            extensions: Vec::new(),
         }
     }
 }
@@ -128,6 +130,9 @@ impl Layout {
     }
     pub fn cache(&self) -> PathBuf {
         self.root.join("cache")
+    }
+    pub fn extensions(&self) -> PathBuf {
+        self.cache().join("extensions")
     }
     pub fn downloads(&self) -> PathBuf {
         self.cache().join("downloads")
@@ -307,6 +312,11 @@ impl MachineManager {
     }
 
     pub fn update(&self) -> Result<Version, String> {
+        self.update_with(&super::release_source::ReleaseSource::official())
+    }
+
+    /// Uses the ordinary install transaction with an explicitly supplied author transport.
+    pub fn update_with(&self, source: &dyn super::ExtensionSource) -> Result<Version, String> {
         let version = self.releases.latest()?;
         let _lock = InstallLock::acquire(&self.layout)?;
         #[cfg(target_os = "linux")]
@@ -321,6 +331,12 @@ impl MachineManager {
         }
         self.cleanup_staging()?;
         self.install_locked(&version)?;
+        if let Some(active) = self.active_version()? {
+            let resources = super::extensions::SignedResources::load(&self.layout, &active)?;
+            for extension in resources.installed_extensions()? {
+                super::extensions::ensure_locked(&self.layout, &version, &extension, source)?;
+            }
+        }
         self.activate_locked(&version)?;
         Ok(version)
     }
@@ -468,6 +484,7 @@ impl MachineManager {
         Ok(InstalledCompiler {
             core,
             manifest,
+            resources: super::SignedResources::load(&self.layout, version)?,
             identity: sha256_file(&root.join(MANIFEST_NAME))?,
             _lease: lease,
         })
@@ -486,6 +503,14 @@ impl MachineManager {
         if destination.exists() {
             let manifest = self.verify_release(&destination, Some(version))?;
             validate_installed_release(&self.layout, &destination, &manifest)?;
+            if package.exists() {
+                self.verify_release(package, Some(version))?;
+                if read_regular_file(&destination.join(MANIFEST_NAME))?
+                    != read_regular_file(&package.join(MANIFEST_NAME))?
+                {
+                    return Err("published Dever version changed its signed manifest".into());
+                }
+            }
             return Ok(());
         }
         let manifest = self.verify_release(package, Some(version))?;
@@ -548,7 +573,7 @@ impl MachineManager {
             .map_err(|error| format!("cannot activate Dever {version}: {error}"))
     }
 
-    fn verify_release(
+    pub(super) fn verify_release(
         &self,
         root: &Path,
         expected: Option<&Version>,
@@ -601,7 +626,7 @@ impl MachineManager {
                     manifest_path.display()
                 )
             })?;
-        if manifest.format != "dever-release-v1" {
+        if manifest.format != "dever-release-v2" {
             return Err("unsupported Dever release manifest format".into());
         }
         if manifest.platform != platform_identity() {
@@ -611,6 +636,7 @@ impl MachineManager {
                 platform_identity()
             ));
         }
+        super::extensions::validate_catalog(&manifest)?;
         Ok(manifest)
     }
 
@@ -706,6 +732,7 @@ pub(crate) struct InstalledCompiler {
     pub(crate) core: PathBuf,
     pub(crate) manifest: ReleaseManifest,
     pub(crate) identity: String,
+    pub(crate) resources: super::SignedResources,
     _lease: InstallLock,
 }
 
@@ -713,14 +740,18 @@ pub(super) struct InstallLock(File);
 
 impl InstallLock {
     pub(super) fn acquire(layout: &Layout) -> Result<Self, String> {
-        Self::open(layout, false)
+        Self::open(layout, false, false)
+    }
+
+    pub(super) fn acquire_wait(layout: &Layout) -> Result<Self, String> {
+        Self::open(layout, false, true)
     }
 
     fn shared(layout: &Layout) -> Result<Self, String> {
-        Self::open(layout, true)
+        Self::open(layout, true, false)
     }
 
-    fn open(layout: &Layout, shared: bool) -> Result<Self, String> {
+    fn open(layout: &Layout, shared: bool, wait: bool) -> Result<Self, String> {
         let path = layout.state().join("install.lock");
         let mut options = OpenOptions::new();
         options.read(true).write(true).create(true).truncate(false);
@@ -750,14 +781,29 @@ impl InstallLock {
         }
         #[cfg(not(unix))]
         let _ = current;
-        let locked = if shared {
-            fs2::FileExt::try_lock_shared(&file)
-        } else {
-            fs2::FileExt::try_lock_exclusive(&file)
-        };
-        locked.map_err(|error| {
-            format!("another Dever installation operation or compilation is active: {error}")
-        })?;
+        let started = std::time::Instant::now();
+        loop {
+            let locked = if shared {
+                fs2::FileExt::try_lock_shared(&file)
+            } else {
+                fs2::FileExt::try_lock_exclusive(&file)
+            };
+            match locked {
+                Ok(()) => break,
+                Err(error)
+                    if wait
+                        && error.kind() == io::ErrorKind::WouldBlock
+                        && started.elapsed() < std::time::Duration::from_secs(300) =>
+                {
+                    std::thread::sleep(std::time::Duration::from_millis(50))
+                }
+                Err(error) => {
+                    return Err(format!(
+                        "another Dever installation operation or compilation is active: {error}"
+                    ));
+                }
+            }
+        }
         Ok(Self(file))
     }
 }
@@ -912,7 +958,17 @@ fn read_regular_file(path: &Path) -> Result<Vec<u8>, String> {
     if !metadata.file_type().is_file() {
         return Err(format!("'{}' must be a regular file", path.display()));
     }
-    fs::read(path).map_err(|error| format!("cannot read '{}': {error}", path.display()))
+    const LIMIT: u64 = 2 * 1024 * 1024;
+    let mut bytes = Vec::new();
+    File::open(path)
+        .map_err(|error| format!("cannot read '{}': {error}", path.display()))?
+        .take(LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    if bytes.len() as u64 > LIMIT {
+        return Err("release metadata exceeds its size limit".into());
+    }
+    Ok(bytes)
 }
 
 pub(super) fn copy_file(source: &Path, destination: &Path, executable: bool) -> Result<(), String> {
@@ -964,7 +1020,7 @@ pub(super) fn sync_tree(root: &Path) -> Result<(), String> {
     sync_directory(root).map_err(|error| error.to_string())
 }
 
-fn validate_installed_release(
+pub(super) fn validate_installed_release(
     layout: &Layout,
     root: &Path,
     manifest: &ReleaseManifest,
@@ -995,7 +1051,11 @@ fn validate_installed_release(
     Ok(())
 }
 
-fn validate_shared_directory(path: &Path, parent: &Path, label: &str) -> Result<(), String> {
+pub(super) fn validate_shared_directory(
+    path: &Path,
+    parent: &Path,
+    label: &str,
+) -> Result<(), String> {
     let metadata = fs::symlink_metadata(path)
         .map_err(|error| format!("cannot inspect {label} '{}': {error}", path.display()))?;
     if metadata.file_type().is_symlink() || !metadata.is_dir() {

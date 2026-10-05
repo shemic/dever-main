@@ -2,7 +2,6 @@
 
 import argparse
 import contextlib
-import gzip
 import hashlib
 import importlib.util
 import io
@@ -40,6 +39,7 @@ class InstallerTests(unittest.TestCase):
         self.payloads = {
             "dever-core": b"fixture core, never executed\n",
             "bootstrap/dever": b"fixture launcher, never executed\n",
+            "bootstrap/lib/libfixture.so": b"fixture private closure\n",
             "skills/dever-language/SKILL.md": b"fixture skill\n",
         }
         self.catalog = {}
@@ -52,8 +52,9 @@ class InstallerTests(unittest.TestCase):
                 "sha256": hashlib.sha256(content).hexdigest(),
             }
         manifest = {
-            "format": "dever-release-v1", "platform": self.platform,
+            "format": "dever-release-v2", "platform": self.platform,
             "version": "1.2.3", "artifacts": list(self.catalog.values()),
+            "extensions": [],
         }
         (self.release / "manifest.json").write_text(json.dumps(manifest))
         self.private = self.root / "test-key.pem"
@@ -82,24 +83,14 @@ class InstallerTests(unittest.TestCase):
         return installer.authenticate(self.release, key or self.public, self.scratch,
                                       self.platform, "1.2.3")
 
-    def archive(self, entries, trailer=None):
-        stream = io.BytesIO()
-        with tarfile.open(fileobj=stream, mode="w", format=tarfile.USTAR_FORMAT) as archive:
-            for name, content, kind in entries:
-                member = tarfile.TarInfo(name)
-                member.type = kind
-                member.size = len(content) if kind == tarfile.REGTYPE else 0
-                if kind == tarfile.SYMTYPE:
-                    member.linkname = "../../outside"
-                archive.addfile(member, io.BytesIO(content) if member.size else None)
-        contents = stream.getvalue()
-        if trailer is not None:
-            contents += trailer
-        return gzip.compress(contents)
+    def create_assets(self, output):
+        return assets.create(self.release, output, Path("/usr/bin/zstd"))
 
-    def extract(self, compressed, destination):
-        with mock.patch.object(installer, "download", return_value=io.BytesIO(compressed)):
-            installer.payload(destination, None, "1.2.3", self.platform, self.catalog)
+    def archive_payloads(self, path):
+        contents = subprocess.run(["/usr/bin/zstd", "-q", "-d", "-c", str(path)],
+                                  env={}, capture_output=True, check=True, timeout=15).stdout
+        with tarfile.open(fileobj=io.BytesIO(contents)) as archive:
+            return {member.name: archive.extractfile(member).read() for member in archive}
 
     def test_signature_accepts_independent_key_and_rejects_wrong_key_or_changed_manifest(self):
         version, catalog, key = self.authenticate()
@@ -119,19 +110,47 @@ class InstallerTests(unittest.TestCase):
         first = self.root / "first"
         second = self.root / "second"
         (self.release / "unlisted").write_text("not published")
-        names = assets.create(self.release, first)
-        self.assertEqual(names, assets.create(self.release, second))
-        self.assertEqual(len(names), 3)
+        names = self.create_assets(first)
+        self.assertEqual(names, self.create_assets(second))
+        self.assertEqual(len(names), 5)
         for name in names:
             self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
-        extracted = self.directory("extracted")
-        self.extract((first / f"dever-{self.platform}.tar.gz").read_bytes(), extracted)
-        actual = {str(path.relative_to(extracted)): path.read_bytes()
-                  for path in extracted.rglob("*") if path.is_file()}
+        actual = self.archive_payloads(first / f"dever-{self.platform}.tar.zst")
         self.assertEqual(actual, self.payloads)
-        self.assertEqual((extracted / "bootstrap/dever").stat().st_mode & 0o777, 0o755)
+        for name in ("bootstrap/dever", "bootstrap/lib/libfixture.so"):
+            blob = first / f"dever-{self.platform}.blob-{self.catalog[name]['sha256']}"
+            self.assertEqual(blob.read_bytes(), self.payloads[name])
         with self.assertRaisesRegex(ValueError, "already exists"):
-            assets.create(self.release, first)
+            self.create_assets(first)
+
+    def test_extension_assets_are_separate_and_cannot_overlap_base(self):
+        manifest_path = self.release / "manifest.json"
+        manifest = json.loads(manifest_path.read_text())
+        name = f"runtime/pip/{self.platform}/runtime.pack"
+        path = self.release / name
+        path.parent.mkdir(parents=True)
+        contents = b"optional Python bytes"
+        path.write_bytes(contents)
+        entry = {"path": name, "bytes": len(contents), "sha256": hashlib.sha256(contents).hexdigest()}
+        manifest["extensions"] = [{"kind": {"type": "runtime", "ecosystem": "pip"},
+                                   "target": self.platform, "artifacts": [entry]}]
+        manifest_path.write_text(json.dumps(manifest))
+        self.sign_manifest()
+        self.authenticate()
+        output = self.root / "split"
+        self.create_assets(output)
+        self.assertEqual(self.archive_payloads(output / f"dever-{self.platform}.tar.zst"), self.payloads)
+        extension = output / f"dever-{self.platform}.ext-runtime-pip-{self.platform}.tar.zst"
+        self.assertEqual(self.archive_payloads(extension), {name: contents})
+        manifest["extensions"][0]["artifacts"].append(self.catalog["dever-core"])
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "resource namespace"):
+            self.create_assets(self.root / "overlap")
+        manifest["extensions"] = [{"kind": {"type": "target"}, "target": self.platform,
+                                   "artifacts": [self.catalog["dever-core"]]}]
+        manifest_path.write_text(json.dumps(manifest))
+        with self.assertRaisesRegex(ValueError, "base package"):
+            self.create_assets(self.root / "host-target")
 
     def test_signed_release_without_matching_skill_is_rejected(self):
         path = self.release / "manifest.json"
@@ -179,7 +198,7 @@ class InstallerTests(unittest.TestCase):
 
             with mock.patch.object(assets, "publish", side_effect=publish), \
                     self.assertRaises(OSError):
-                assets.create(self.release, output)
+                self.create_assets(output)
             self.assertTrue(output.is_dir())
             if populated:
                 self.assertEqual((output / "user-file").read_bytes(), b"concurrent user bytes")
@@ -187,23 +206,48 @@ class InstallerTests(unittest.TestCase):
                 self.assertEqual(list(output.iterdir()), [])
             self.assertEqual(list(self.root.glob(".dever-release-assets-*")), [])
 
-    def test_archive_rejects_unsigned_duplicate_symlink_wrong_size_missing_and_bad_tail(self):
-        normal = [(name, content, tarfile.REGTYPE) for name, content in self.payloads.items()]
-        cases = {
-            "unsigned": normal + [("outside", b"extra", tarfile.REGTYPE)],
-            "duplicate": normal + [normal[0]],
-            "symlink": [(normal[0][0], b"", tarfile.SYMTYPE)] + normal[1:],
-            "size": [(normal[0][0], b"short", tarfile.REGTYPE)] + normal[1:],
-            "missing": normal[:-1],
-        }
-        for name, entries in cases.items():
-            with self.subTest(name=name), self.assertRaises(ValueError):
-                self.extract(self.archive(entries), self.directory(name))
-        with self.assertRaisesRegex(ValueError, "尾部"):
-            self.extract(self.archive(normal, b"hidden"), self.directory("tail"))
-        corrupted = [(normal[0][0], b"x" * len(normal[0][1]), tarfile.REGTYPE)] + normal[1:]
-        with self.assertRaisesRegex(ValueError, "摘要"):
-            self.extract(self.archive(corrupted), self.directory("digest"))
+    def test_network_payload_executes_only_verified_helper_with_private_libraries(self):
+        assets_path = self.root / "assets"
+        self.create_assets(assets_path)
+        calls = []
+
+        def download(address):
+            return (assets_path / address.rsplit("/", 1)[-1]).open("rb")
+
+        def extract(command, **kwargs):
+            self.assertEqual(command[1], "--dever-extract")
+            launcher = Path(command[0])
+            self.assertEqual(launcher.read_bytes(), self.payloads["bootstrap/dever"])
+            self.assertEqual((launcher.parent / "lib/libfixture.so").read_bytes(),
+                             self.payloads["bootstrap/lib/libfixture.so"])
+            self.assertEqual(launcher.stat().st_mode & 0o777, 0o755)
+            configuration = json.loads(Path(command[2]).read_text())
+            self.assertEqual(configuration["trusted_key"], str(self.public))
+            self.assertEqual(kwargs["env"], {})
+            self.assertTrue(Path(configuration["archive"]).is_file())
+            calls.append(command)
+
+        with mock.patch.object(installer, "download", side_effect=download), \
+                mock.patch.object(installer.subprocess, "run", side_effect=extract):
+            installer.payload(self.directory("network"), None, "1.2.3", self.platform,
+                              self.catalog, self.public)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(list(self.root.glob(".extract-*")), [])
+
+        blob = assets_path / f"dever-{self.platform}.blob-{self.catalog['bootstrap/dever']['sha256']}"
+        for corrupt in (b"x" * len(self.payloads["bootstrap/dever"]), self.payloads["bootstrap/dever"] + b"extra"):
+            blob.write_bytes(corrupt)
+            with mock.patch.object(installer, "download", side_effect=download), \
+                    mock.patch.object(installer.subprocess, "run") as execute, \
+                    self.assertRaises(ValueError):
+                installer.payload(self.release, None, "1.2.3", self.platform, self.catalog, self.public)
+            execute.assert_not_called()
+
+    def test_download_archive_is_bounded(self):
+        with mock.patch.object(installer, "MAX_RELEASE", 4), \
+                mock.patch.object(installer, "download", return_value=io.BytesIO(b"12345")), \
+                self.assertRaisesRegex(ValueError, "超过"):
+            installer.download_archive("unused", self.root / "oversized.zst")
 
     def test_local_payload_rejects_symlink_and_source_directory(self):
         copied = self.directory("copied")
@@ -215,7 +259,7 @@ class InstallerTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "符号链接"):
             installer.payload(self.directory("symlink"), self.release, "1.2.3", self.platform, self.catalog)
         with self.assertRaisesRegex(ValueError, "symlinks"):
-            assets.create(self.release, self.root / "invalid-assets")
+            self.create_assets(self.root / "invalid-assets")
         core.unlink()
         core.mkdir()
         with self.assertRaisesRegex(ValueError, "类型"):

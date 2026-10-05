@@ -280,14 +280,16 @@ fn backend_fixture(mutate: bool) -> LocalRegistry {
             ),
         ],
     );
-    let key = (Ecosystem::Pip, "/pypi/buildhelper/1.0.0/json".into());
-    let mut release: serde_json::Value = serde_json::from_slice(&registry.0[&key]).unwrap();
-    let url = release["urls"][0]["url"].as_str().unwrap().to_owned();
-    release["urls"][0]["digests"]["sha256"] = serde_json::json!(digest(&helper));
+    let helper_source = source_archive(vec![
+        ("buildhelper-1.0.0/pyproject.toml", b"[build-system]\nrequires = []\nbuild-backend = 'backend'\nbackend-path = ['.']\n".to_vec()),
+        ("buildhelper-1.0.0/backend.py", b"import shutil\nfrom pathlib import Path\ndef build_wheel(directory, config_settings=None, metadata_directory=None):\n    name = 'buildhelper-1.0.0-py3-none-any.whl'\n    shutil.copy('result.whl', Path(directory) / name)\n    return name\n".to_vec()),
+        ("buildhelper-1.0.0/result.whl", helper),
+    ]);
+    registry.0.insert((Ecosystem::Pip, "/pypi/buildhelper/1.0.0/json".into()),
+        serde_json::to_vec(&serde_json::json!({"info":{},"urls":[{"packagetype":"sdist","filename":"buildhelper-1.0.0.tar.gz","url":"helper-source","digests":{"sha256":digest(&helper_source)}}]})).unwrap());
     registry
         .0
-        .insert(key, serde_json::to_vec(&release).unwrap());
-    registry.0.insert((Ecosystem::Pip, url), helper);
+        .insert((Ecosystem::Pip, "helper-source".into()), helper_source);
     let original = wheel_fixture::metadata("sample", "1.0.0", &[], &[]);
     let changed = format!("{original}Summary: changed by wheel hook\n");
     let wheel = wheel_fixture::pack(
@@ -334,11 +336,20 @@ def build_wheel(directory, config_settings=None, metadata_directory=None):
         ("sample-1.0.0/changed-metadata", changed.into_bytes()),
         ("sample-1.0.0/result.whl", wheel),
     ];
+    let source = source_archive(sourcefiles);
+    registry.0.insert((Ecosystem::Pip,"/pypi/sample/1.0.0/json".into()),serde_json::to_vec(&serde_json::json!({"info":{},"urls":[{"packagetype":"sdist","filename":"sample-1.0.0.tar.gz","url":"sample-source","digests":{"sha256":digest(&source)}}]})).unwrap());
+    registry
+        .0
+        .insert((Ecosystem::Pip, "sample-source".into()), source);
+    registry
+}
+
+fn source_archive(files: Vec<(&str, Vec<u8>)>) -> Vec<u8> {
     let mut tar = tar::Builder::new(flate2::write::GzEncoder::new(
         Vec::new(),
         flate2::Compression::default(),
     ));
-    for (name, bytes) in sourcefiles {
+    for (name, bytes) in files {
         let mut header = tar::Header::new_gnu();
         header.set_size(bytes.len() as u64);
         header.set_mode(0o644);
@@ -346,12 +357,7 @@ def build_wheel(directory, config_settings=None, metadata_directory=None):
         tar.append_data(&mut header, name, bytes.as_slice())
             .unwrap();
     }
-    let source = tar.into_inner().unwrap().finish().unwrap();
-    registry.0.insert((Ecosystem::Pip,"/pypi/sample/1.0.0/json".into()),serde_json::to_vec(&serde_json::json!({"info":{},"urls":[{"packagetype":"sdist","filename":"sample-1.0.0.tar.gz","url":"sample-source","digests":{"sha256":digest(&source)}}]})).unwrap());
-    registry
-        .0
-        .insert((Ecosystem::Pip, "sample-source".into()), source);
-    registry
+    tar.into_inner().unwrap().finish().unwrap()
 }
 
 #[test]
@@ -383,12 +389,55 @@ fn pep517_hooks_keep_requirements_cli_and_metadata_boundaries() {
         let lock = result.unwrap();
         dever_cli::libs::doctor(&lock).unwrap();
         assert_eq!(lock.builds[0].dynamic_requires, vec!["buildhelper==1.0.0"]);
+        assert_eq!(
+            lock.builds[0].inputs.builds.len(),
+            1,
+            "nested build requirement receipt must be retained"
+        );
+        let before = lock.encode().unwrap();
+        let cold = FixtureArtifactStore::default();
+        let archives = super::restore_tests::archives_only(&lock, &transport);
+        dever_cli::libs::restore::restore_artifacts(
+            &lock,
+            &archives,
+            &cold,
+            &inputs,
+            &inputs.settings.runtime.target,
+            &dever_cli::libs::sumdb::Verifier::official(),
+        )
+        .unwrap();
+        assert_eq!(lock.encode().unwrap(), before);
+        let mut mismatch = lock.clone();
+        mismatch.builds[0].output.sha256 = "0".repeat(64);
+        mismatch.libs[0].artifacts = vec![mismatch.builds[0].output.clone()];
+        mismatch.libs[0].build = Some(mismatch.builds[0].identity().unwrap());
+        let rejected = FixtureArtifactStore::default();
+        assert!(
+            dever_cli::libs::restore::restore_artifacts(
+                &mismatch,
+                &archives,
+                &rejected,
+                &inputs,
+                &inputs.settings.runtime.target,
+                &dever_cli::libs::sumdb::Verifier::official()
+            )
+            .unwrap_err()
+            .contains("not byte reproducible")
+        );
+        assert!(
+            !rejected
+                .has(
+                    &mismatch.builds[0].output.sha256,
+                    &inputs.settings.runtime.target
+                )
+                .unwrap()
+        );
         for mutation in 0..3 {
             let mut altered = lock.clone();
             match mutation {
                 0 => altered.builds[0].tools.sha256 = "not-a-hash".into(),
                 1 => altered.builds[0].dynamic_requires = vec!["buildhelper>=2".into()],
-                _ => *altered.builds[0].dependencies = LockFile::new(vec![]).unwrap(),
+                _ => *altered.builds[0].inputs = LockFile::new(vec![]).unwrap(),
             }
             altered.libs[0].build = Some(altered.builds[0].identity().unwrap());
             assert!(
@@ -441,7 +490,7 @@ fn builds_official_python_source_with_isolated_pep517() {
     let lock = dever_cli::libs::LibResolver::resolve(&resolver, &requested).unwrap();
     dever_cli::libs::doctor(&lock).unwrap();
     assert_eq!(lock.builds.len(), 1);
-    assert!(!lock.builds[0].dependencies.libs.is_empty());
+    assert!(!lock.builds[0].inputs.libs.is_empty());
     let artifact = &lock
         .libs
         .iter()

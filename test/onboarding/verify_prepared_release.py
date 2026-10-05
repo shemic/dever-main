@@ -33,8 +33,8 @@ def execute(arguments, timeout=180):
     return completed.stdout.strip()
 
 
-def response(output):
-    expected = {"code": 0, "message": "ok", "data": "Hello, Dever"}
+def response(output, data="Hello, Dever"):
+    expected = {"code": 0, "message": "ok", "data": data}
     if json.loads(output) != expected:
         raise RuntimeError(f"unexpected application response: {output}")
 
@@ -50,30 +50,56 @@ def minimal_os(image):
         (image / name).mkdir()
 
 
-def isolated(image):
+def worker_project(image, ecosystem):
+    """Small no-Lib Adapter: preparation must still acquire its managed runtime."""
+    entries = {
+        "pip": ("py", "import gzip\n\nasync def probe(payload, setting):\n    return {\"okay\": gzip.decompress(gzip.compress(b'dever')) == b'dever'}\n"),
+        "npm": ("mjs", "import {createHash} from 'node:crypto';\nexport async function probe() { return {okay:createHash('sha256').update('dever').digest().length === 32}; }\n"),
+        "go": ("go", (WORKSPACE / "test/ecosystem-release/probe.go").read_text()),
+    }
+    extension, source = entries[ecosystem]
+    root = image / f"worker-{ecosystem}"
+    files = {
+        "config/setting.json": "{}\n",
+        "module/sample/worker/port.dever": "probe() (okay: Bool) fails app.ProbeResult\n",
+        "module/sample/worker/app.dever": "type ProbeResult { error Unavailable(message: Text) }\nprobe() (okay: Bool) { okay = port.probe() }\n",
+        "module/sample/worker/api.dever": "cmd probe = app.probe\n",
+        "module/sample/worker/adapter.dever": f'external {ecosystem} "worker/probe.{extension}" {{}}\n',
+        f"module/sample/worker/worker/probe.{extension}": source,
+    }
+    for relative, contents in files.items():
+        path = root / relative
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(contents)
+    return root
+
+
+def isolated(image, init):
     return [
         WORKSPACE / "target/sandbox-inputs/assets/bin/bwrap",
         "--unshare-all", "--die-with-parent", "--new-session", "--bind", image,
         "/", "--proc", "/proc", "--dev", "/dev", "--chdir", "/", "--ro-bind",
-        WORKSPACE / "target/debug/examples/native-acceptance-init", "/fixture-proc-init",
+        init, "/fixture-proc-init",
     ]
 
 
 class InstalledDaemon:
     """All clients enter the same PID namespace so SO_PEERCRED stays valid."""
 
-    def __init__(self, image, records):
+    def __init__(self, image, records, init):
         self.image = image
         self.records = records
+        self.init = init
         self.child = None
         self.pidfd = None
         self.pid = None
 
     def __enter__(self):
+        self.records.mkdir(parents=True, exist_ok=True)
         self.information = (self.records / "namespace.json").open("w+")
         self.errors = (self.records / "daemon.log").open("w+")
         self.child = subprocess.Popen(
-            [str(value) for value in isolated(self.image) + [
+            [str(value) for value in isolated(self.image, self.init) + [
                 "--info-fd", "1", "--", "/fixture-proc-init",
                 "/opt/dever/bin/deverd", "--root", "/opt/dever",
             ]], env={}, stdout=self.information, stderr=self.errors,
@@ -134,6 +160,38 @@ class InstalledDaemon:
             self.errors.close()
 
 
+def ordinary_uid_target_reuse(image):
+    # bwrap's single-UID user namespace cannot represent a second identity.
+    # Use the installed private machine with real kernel UIDs for this check;
+    # no host language tools or global service participate in target reuse.
+    machine = image / "opt/dever"
+    child = subprocess.Popen([str(machine / "bin/deverd"), "--root", str(machine)],
+                             env={}, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+    try:
+        deadline = time.monotonic() + 10
+        while not (machine / "state/deverd.sock").exists():
+            if child.poll() is not None or time.monotonic() >= deadline:
+                raise RuntimeError("private UID acceptance daemon did not become ready")
+            time.sleep(0.02)
+        for uid in (65533, 65534):
+            completed = subprocess.run(
+                [str(machine / "bin/dever"), "target", "add", "linux-aarch64"],
+                env={}, user=uid, group=uid, extra_groups=[], capture_output=True,
+                text=True, timeout=180, check=False,
+            )
+            if completed.returncode:
+                raise RuntimeError(f"UID {uid} target reuse failed: {completed.stderr}")
+    finally:
+        if child.poll() is None:
+            child.terminate()
+        try:
+            child.wait(timeout=10)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.wait(timeout=10)
+        child.stderr.close()
+
+
 def install_assets(assets, image, manifest):
     # Only transport is local: signature verification, full tar extraction and
     # the final bootstrap executable are the real first-install implementation.
@@ -146,8 +204,12 @@ def install_assets(assets, image, manifest):
     routes = {
         f"{base}/latest/download/{stem}.manifest.json": assets / f"{stem}.manifest.json",
         f"{base}/latest/download/{stem}.manifest.sig": assets / f"{stem}.manifest.sig",
-        f"{base}/download/v{manifest['version']}/{stem}.tar.gz": assets / f"{stem}.tar.gz",
+        f"{base}/download/v{manifest['version']}/{stem}.tar.zst": assets / f"{stem}.tar.zst",
     }
+    for artifact in manifest["artifacts"]:
+        if artifact["path"] == "bootstrap/dever" or artifact["path"].startswith("bootstrap/lib/"):
+            name = f"{stem}.blob-{artifact['sha256']}"
+            routes[f"{base}/download/v{manifest['version']}/{name}"] = assets / name
     installer.download = lambda address: routes[address].open("rb")
     installer.install(argparse.Namespace(
         version="latest", release=None, system_root=image, no_start=True,
@@ -155,7 +217,7 @@ def install_assets(assets, image, manifest):
     ))
 
 
-def accept(release, assets, image, report):
+def accept(release, assets, image, report, init, extension_helper=None):
     image.mkdir(mode=0o755)
     report.parent.mkdir(parents=True, exist_ok=True)
     manifest = json.loads((release / "manifest.json").read_bytes())
@@ -185,13 +247,19 @@ def accept(release, assets, image, report):
         if (installed / "manifest.json").read_bytes() != (release / "manifest.json").read_bytes():
             raise RuntimeError("installed package differs from the release under acceptance")
         passed("actual_signed_release_first_install")
+        for extension in manifest["extensions"]:
+            if any((installed / artifact["path"]).exists() for artifact in extension["artifacts"]):
+                raise RuntimeError("base install unexpectedly includes optional extension bytes")
+        passed("base_install_excludes_optional_extensions")
         launcher = image / "opt/dever/bin/dever"
         if execute([launcher, "version"]) != manifest["version"]:
             raise RuntimeError("installed version mismatch")
         if (image / "usr/local/bin/dever").readlink() != Path("/opt/dever/bin/dever"):
             raise RuntimeError("public launcher link mismatch")
         passed("installed_version_and_public_entry")
-        with InstalledDaemon(image, report.parent) as daemon:
+        standalone = [("first", "hello.greeting.greet", '{"name":"Dever"}', "Hello, Dever"),
+                      ("second", "hello.greeting.greet", '{"name":"Dever"}', "Hello, Dever")]
+        with InstalledDaemon(image, report.parent / f"{report.stem}-process", init) as daemon:
             for project, markdown in (("first", False), ("second", True)):
                 root = "/" + project
                 args = ["new", root] + (["--markdown"] if markdown else [])
@@ -211,27 +279,62 @@ def accept(release, assets, image, report):
             if not (image / "ai-skill/SKILL.md").is_file():
                 raise RuntimeError("missing installed skill entry")
             passed("versioned_skill_resolution_and_loader_install")
-            daemon.command("build", "/first", "--target", "linux-aarch64", "--output", "/first/program.arm64")
-            with (image / "first/program.arm64").open("rb") as executable:
-                header = executable.read(20)
-            if header[:4] != b"\x7fELF" or header[18:20] != b"\xb7\x00":
-                raise RuntimeError("cross build did not produce an ARM64 ELF")
-            passed("arm64_application_cross_build")
+            try:
+                daemon.command("build", "/first", "--target", "linux-aarch64", "--output", "/first/program.arm64")
+            except RuntimeError as error:
+                if "dever target add linux-aarch64" not in str(error):
+                    raise
+            else:
+                raise RuntimeError("unprepared cross build should fail without fetching resources")
+            passed("missing_target_fails_offline_with_preparation_command")
+            if assets and extension_helper:
+                execute([extension_helper, image / "opt/dever", assets, manifest["version"], "target-linux-aarch64"])
+                daemon.command("target", "add", "linux-aarch64")
+                daemon.command("build", "/first", "--target", "linux-aarch64", "--output", "/first/program.arm64")
+                with (image / "first/program.arm64").open("rb") as executable:
+                    header = executable.read(20)
+                if header[:4] != b"\x7fELF" or header[18:20] != b"\xb7\x00":
+                    raise RuntimeError("cross build did not produce an ARM64 ELF")
+                passed("actual_target_extension_install_reuse_and_arm64_application_cross_build")
+                for ecosystem in ("pip", "npm", "go"):
+                    execute([extension_helper, image / "opt/dever", assets, manifest["version"],
+                             f"runtime-{ecosystem}-{manifest['platform']}"])
+                    project = worker_project(image, ecosystem)
+                    root = "/" + project.name
+                    daemon.command("lib", "update", root)
+                    before = [(project / name).read_bytes() for name in ("config/setting.json", "dever.lock")]
+                    daemon.command("lib", "install", root)
+                    after = [(project / name).read_bytes() for name in ("config/setting.json", "dever.lock")]
+                    if before != after:
+                        raise RuntimeError("exact Lib installation modified project configuration or lock")
+                    daemon.command("check", root)
+                    response(daemon.command("run", root, "--", "sample.worker.probe", "{}"), True)
+                    daemon.command("build", root, "--output", root + "/program")
+                    standalone.append((project.name, "sample.worker.probe", "{}", True))
+                    passed(f"actual_{ecosystem}_extension_no_lib_worker_exact_install_run_build")
             result["cache"] = json.loads(daemon.command("cache", "status"))
+        if assets and extension_helper:
+            ordinary_uid_target_reuse(image)
+            passed("two_ordinary_uids_reuse_shared_signed_target_extension")
         # Remove sources and the entire machine from the visible OS root. Keep
         # them outside that root for a subsequent online-update acceptance.
         moved = []
         try:
-            for relative in ("opt/dever", "first/module", "second/module"):
+            for relative in ["opt/dever"] + [f"{project}/module" for project, *_ in standalone]:
                 source = image / relative
                 hidden = image.parent / ("hidden-" + relative.replace("/", "-"))
                 source.rename(hidden)
                 moved.append((source, hidden))
-            for project in ("first", "second"):
-                response(execute(isolated(image) + [
+            for project, entry, parameters, data in standalone:
+                # These projects were created above; remove only their generated
+                # Worker cache so standalone execution must extract its own bundle.
+                cache = image / project / "data/cache/lib"
+                if cache.exists():
+                    shutil.rmtree(cache)
+                response(execute(isolated(image, init) + [
                     "--", "/fixture-proc-init", f"/{project}/program",
-                    "hello.greeting.greet", '{"name":"Dever"}',
-                ]))
+                    entry, parameters,
+                ]), data)
             passed("standalone_programs_without_sources_or_machine")
         finally:
             for source, hidden in reversed(moved):
@@ -248,14 +351,17 @@ def accept(release, assets, image, report):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--release", required=True, type=Path)
-    parser.add_argument("--assets", type=Path, help="also exercise the three actual download assets")
+    parser.add_argument("--assets", type=Path, help="exercise actual split download assets")
+    parser.add_argument("--extension-helper", type=Path, help="explicit prepare-extensions author fixture")
+    parser.add_argument("--init", type=Path, required=True, help="explicit static native-acceptance-init fixture")
     parser.add_argument("--image", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
     args = parser.parse_args()
     if os.geteuid() != 0:
         parser.error("requires root for an owned image/namespace; never installs host services")
     accept(args.release.resolve(), args.assets.resolve() if args.assets else None,
-           args.image.absolute(), args.report.absolute())
+           args.image.absolute(), args.report.absolute(), args.init.absolute(),
+           args.extension_helper.absolute() if args.extension_helper else None)
 
 
 if __name__ == "__main__":

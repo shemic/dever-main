@@ -12,6 +12,43 @@ mod environment;
 use environment::{Environment, Output};
 
 impl Session<'_> {
+    pub(super) fn replay_npm(
+        &self,
+        receipt: &Receipt,
+        store: &dyn crate::libs::ArtifactStore,
+    ) -> Result<Vec<u8>, String> {
+        let (runtime, _) = self.inputs.runtime(Ecosystem::Npm)?;
+        if runtime.pack != receipt.runtime {
+            return Err("locked npm build runtime changed".into());
+        }
+        let environment = Environment::new(self.inputs, &runtime)?;
+        if environment.descriptor != receipt.tools
+            || Some(&environment.python_runtime) != receipt.auxiliary_runtime.as_ref()
+        {
+            return Err("locked npm build tools or auxiliary runtime changed".into());
+        }
+        let mut graph = receipt
+            .inputs
+            .npm
+            .first()
+            .ok_or("npm build input graph missing")?
+            .clone();
+        let (files, executables) = installation_inputs(store, &receipt.inputs, &graph)?;
+        let output = environment.run(self.inputs, &graph, &files, &executables)?;
+        prune_failed(&mut graph, &output.failed)?;
+        npm::validate_built_files(&graph, &output.files)?;
+        if Some(&graph) != receipt.graph.as_ref()
+            || output.native != receipt.native_entries
+            || output.rejections != receipt.native_rejections
+        {
+            return Err(
+                "npm fixed build replay changed graph, optional outcomes or native admission"
+                    .into(),
+            );
+        }
+        archive(&output)
+    }
+
     pub(crate) fn npm(
         &self,
         resolver: &RegistryResolver<'_>,
@@ -21,26 +58,7 @@ impl Session<'_> {
     ) -> Result<(), String> {
         let mut lock = LockFile::new(libraries.clone())?;
         lock.npm.push(graph.clone());
-        let archives = libraries
-            .iter()
-            .map(|lib| {
-                let artifact = lib.artifacts.first().ok_or("npm source archive missing")?;
-                Ok((
-                    lib.spec.clone(),
-                    resolver.store.verify_exact(
-                        &artifact.sha256,
-                        artifact.bytes,
-                        &artifact.target,
-                    )?,
-                ))
-            })
-            .collect::<Result<BTreeMap<_, _>, String>>()?;
-        let files = npm::build_files(graph, &lock, |lib| {
-            archives
-                .get(&lib.spec)
-                .map(Vec::as_slice)
-                .ok_or("npm source archive missing".into())
-        })?;
+        let (files, executables) = installation_inputs(resolver.store, &lock, graph)?;
         if !npm::requires_build(&files)? {
             return Ok(());
         }
@@ -66,7 +84,6 @@ impl Session<'_> {
             retain_archives(libraries, graph);
             return Ok(());
         }
-        let executables = npm::build_executables(graph, &archives)?;
         let environment = Environment::new(self.inputs, runtime)?;
         let output = environment.run(self.inputs, graph, &files, &executables)?;
         prune_failed(graph, &output.failed)?;
@@ -82,6 +99,7 @@ impl Session<'_> {
             path: format!("build/npm/{digest}/installation.tgz"),
             bytes: bytes.len() as u64,
             sha256: digest,
+            source: None,
         };
         let receipt = Receipt {
             ecosystem: Ecosystem::Npm,
@@ -97,7 +115,7 @@ impl Session<'_> {
             frontend: super::frontend(&Ecosystem::Npm)?,
             python: None,
             dynamic_requires: vec![],
-            dependencies: Box::new(LockFile::new(vec![])?),
+            inputs: Box::new(lock),
             config_settings: BTreeMap::new(),
             output: output_artifact,
         };
@@ -112,6 +130,33 @@ impl Session<'_> {
         )?;
         Ok(())
     }
+}
+
+type InstallationInputs = (Vec<(String, Vec<u8>)>, BTreeSet<String>);
+
+fn installation_inputs(
+    store: &dyn crate::libs::ArtifactStore,
+    lock: &LockFile,
+    graph: &npm::Environment,
+) -> Result<InstallationInputs, String> {
+    let archives = lock
+        .libs
+        .iter()
+        .map(|lib| {
+            let artifact = lib.artifacts.first().ok_or("npm source archive missing")?;
+            Ok((
+                lib.spec.clone(),
+                store.verify_exact(&artifact.sha256, artifact.bytes, &artifact.target)?,
+            ))
+        })
+        .collect::<Result<BTreeMap<_, _>, String>>()?;
+    let files = npm::build_files(graph, lock, |lib| {
+        archives
+            .get(&lib.spec)
+            .map(Vec::as_slice)
+            .ok_or("npm source archive missing".into())
+    })?;
+    Ok((files, npm::build_executables(graph, &archives)?))
 }
 
 fn archive(output: &Output) -> Result<Vec<u8>, String> {

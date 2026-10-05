@@ -1,31 +1,35 @@
 //! Explicit installation/update downloads. Project commands never enter here.
 
-use std::collections::{BTreeMap, BTreeSet};
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{Duration, Instant};
 
+use super::extensions::Extension;
+#[cfg(test)]
+use super::extensions::PAYLOAD_LIMIT as RELEASE_LIMIT;
+#[cfg(test)]
+use super::release::ReleaseManifest;
 use super::release::{
-    InstallLock, Layout, MachineManager, ReleaseManifest, Version, decode_hex_file,
-    ensure_real_directory, platform_identity, reject_symlink_ancestors,
-    set_shared_file_permissions, sync_directory, sync_tree, validate_shared_file,
+    InstallLock, Layout, MachineManager, Version, decode_hex_file, ensure_real_directory,
+    platform_identity, reject_symlink_ancestors, set_shared_file_permissions, sync_directory,
+    sync_tree, validate_shared_file,
 };
+use super::validate_catalog;
 
 const OFFICIAL_RELEASES: &str = "https://github.com/shemic/dever-main/releases";
 const DOWNLOAD_TIMEOUT: Duration = Duration::from_secs(300);
 const METADATA_LIMIT: u64 = 2 * 1024 * 1024;
-const RELEASE_LIMIT: u64 = 2 * 1024 * 1024 * 1024;
 static NEXT_DOWNLOAD: AtomicU64 = AtomicU64::new(0);
 
-struct ReleaseSource {
+pub(super) struct ReleaseSource {
     base: String,
     agent: ureq::Agent,
 }
 
 impl ReleaseSource {
-    fn official() -> Self {
+    pub(super) fn official() -> Self {
         Self::new(OFFICIAL_RELEASES.to_owned())
     }
 
@@ -119,6 +123,23 @@ impl ReleaseSource {
             return Err("official release metadata exceeds its size limit".into());
         }
         write_new(path, &bytes)
+    }
+}
+
+impl super::ExtensionSource for ReleaseSource {
+    fn open(
+        &self,
+        version: &Version,
+        extension: &super::ExtensionId,
+    ) -> Result<Box<dyn Read>, String> {
+        Ok(Box::new(
+            self.response(
+                self.asset(version.as_str(), &extension.asset_suffix()),
+                Instant::now(),
+            )?
+            .into_body()
+            .into_reader(),
+        ))
     }
 }
 
@@ -218,12 +239,11 @@ fn prepare_from(
         }
         Err(error) if error.kind() == io::ErrorKind::NotFound => {
             let mut response =
-                source.response(source.asset(version.as_str(), "tar.gz"), started)?;
-            let compressed = response.body_mut().as_reader().take(RELEASE_LIMIT + 1);
-            unpack(
-                flate2::read::GzDecoder::new(compressed),
+                source.response(source.asset(version.as_str(), "tar.zst"), started)?;
+            super::release_archive::extract(
+                response.body_mut().as_reader(),
                 &staging.0,
-                &manifest,
+                &manifest.artifacts,
             )?;
             MachineManager::verify_package(&staging.0, Some(&version), &key)?;
             sync_tree(&staging.0)?;
@@ -250,80 +270,111 @@ fn prepare_from(
     Ok(version)
 }
 
-fn validate_catalog(manifest: &ReleaseManifest) -> Result<(), String> {
-    if manifest.artifacts.is_empty() || manifest.artifacts.len() > 4096 {
-        return Err("release artifact count is outside 1..=4096".into());
-    }
-    let mut paths = BTreeSet::new();
-    let mut size = 0_u64;
-    for artifact in &manifest.artifacts {
-        if artifact
-            .path
-            .split('/')
-            .any(|part| part.is_empty() || part == "." || part == "..")
-            || artifact.path.contains(['\\', ':', '\0'])
-            || matches!(artifact.path.as_str(), "manifest.json" | "manifest.sig")
-            || !paths.insert(&artifact.path)
-        {
-            return Err("release has an unsafe or duplicate artifact path".into());
-        }
-        size = size
-            .checked_add(artifact.bytes)
-            .ok_or("release size overflow")?;
-        if size > RELEASE_LIMIT {
-            return Err("release exceeds its two-GiB unpacked size limit".into());
-        }
-    }
-    Ok(())
-}
-
+#[cfg(test)]
 fn unpack(reader: impl Read, root: &Path, manifest: &ReleaseManifest) -> Result<(), String> {
     validate_catalog(manifest)?;
-    let expected: BTreeMap<_, _> = manifest
-        .artifacts
-        .iter()
-        .map(|artifact| (artifact.path.as_str(), artifact))
-        .collect();
-    let mut seen = BTreeSet::new();
-    // Raw entries reject PAX/GNU extensions before tar can buffer arbitrary metadata.
-    let mut archive = tar::Archive::new(reader.take(RELEASE_LIMIT + 4096 * 1024));
-    for entry in archive
-        .entries()
-        .map_err(|error| format!("invalid release archive: {error}"))?
-        .raw(true)
+    super::release_archive::unpack(reader, root, &manifest.artifacts)
+}
+
+pub(super) fn prepare_extension(
+    layout: &Layout,
+    version: &Version,
+    extension: &Extension,
+    destination: &Path,
+    source: &dyn super::ExtensionSource,
+) -> Result<(), String> {
+    let staging = Download::new(&layout.staging())?;
+    super::release_archive::extract(
+        source.open(version, &extension.id())?,
+        &staging.0,
+        &extension.artifacts,
+    )?;
+    #[cfg(unix)]
     {
-        let mut entry = entry.map_err(|error| format!("invalid release archive entry: {error}"))?;
-        if !entry.header().entry_type().is_file() {
-            return Err("release archives may contain only regular files".into());
-        }
-        let bytes = entry.path_bytes();
-        let name = std::str::from_utf8(&bytes)
-            .map_err(|_| "release archive path is not UTF-8")?
-            .to_owned();
-        let artifact = expected
-            .get(name.as_str())
-            .ok_or("release archive contains an unsigned file")?;
-        if !seen.insert(name.clone()) || entry.size() != artifact.bytes {
-            return Err("release archive contains a duplicate or wrong-sized file".into());
-        }
-        let path = root.join(&name);
-        fs::create_dir_all(path.parent().expect("artifact has a parent"))
-            .map_err(|error| format!("cannot create release artifact directory: {error}"))?;
-        let mut file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .open(&path)
-            .map_err(|error| format!("cannot create release artifact: {error}"))?;
-        let bytes = io::copy(&mut entry, &mut file)
-            .map_err(|error| format!("cannot extract release artifact: {error}"))?;
-        if bytes != artifact.bytes {
-            return Err("release archive contains a truncated file".into());
-        }
-        set_shared_file_permissions(&path, false)?;
-        file.sync_all().map_err(|error| error.to_string())?;
+        use std::os::unix::fs::PermissionsExt;
+        fs::set_permissions(&staging.0, fs::Permissions::from_mode(0o755))
+            .map_err(|error| error.to_string())?;
     }
-    if seen.len() != expected.len() {
-        return Err("release archive is missing signed artifacts".into());
+    super::extensions::verify_extension(&staging.0, &extension.artifacts)?;
+    if matches!(extension.kind, super::ExtensionKind::Target) {
+        super::runtime_pack::validate(&staging.0, version.as_str(), extension.target)?;
+    }
+    sync_tree(&staging.0)?;
+    publish(&staging.0, destination)?;
+    sync_directory(destination.parent().ok_or("extension has no parent")?)
+        .map_err(|error| error.to_string())
+}
+
+/// Private, independently authenticated installer entry; never accepted over IPC.
+pub fn extract_config(config: &Path) -> Result<(), String> {
+    #[derive(serde::Deserialize)]
+    #[serde(deny_unknown_fields)]
+    struct Extraction {
+        release: PathBuf,
+        archive: PathBuf,
+        trusted_key: PathBuf,
+    }
+    trusted_input(config, false)?;
+    let mut bytes = Vec::new();
+    File::open(config)
+        .map_err(|error| error.to_string())?
+        .take(METADATA_LIMIT + 1)
+        .read_to_end(&mut bytes)
+        .map_err(|error| error.to_string())?;
+    if bytes.len() as u64 > METADATA_LIMIT {
+        return Err("extraction config exceeds its size limit".into());
+    }
+    let settings: Extraction = serde_json::from_slice(&bytes)
+        .map_err(|error| format!("invalid extraction config: {error}"))?;
+    trusted_input(&settings.release, true)?;
+    trusted_input(&settings.archive, false)?;
+    trusted_input(&settings.trusted_key, false)?;
+    if settings.trusted_key.starts_with(&settings.release) {
+        return Err("trusted key must be supplied independently outside the release".into());
+    }
+    let key = decode_hex_file(&settings.trusted_key, 32)?;
+    let manifest = MachineManager::signed_manifest(&settings.release, &key)?;
+    let archive = File::open(&settings.archive).map_err(|error| error.to_string())?;
+    super::release_archive::extract(archive, &settings.release, &manifest.artifacts)?;
+    MachineManager::verify_package(&settings.release, Some(&manifest.version), &key)?;
+    sync_tree(&settings.release)
+}
+
+fn trusted_input(path: &Path, directory: bool) -> Result<(), String> {
+    if !path.is_absolute()
+        || path.components().any(|part| {
+            matches!(
+                part,
+                std::path::Component::ParentDir | std::path::Component::CurDir
+            )
+        })
+    {
+        return Err("extraction paths must be absolute and normalized".into());
+    }
+    reject_symlink_ancestors(path)?;
+    let metadata = fs::symlink_metadata(path)
+        .map_err(|error| format!("cannot inspect extraction input: {error}"))?;
+    if directory && !metadata.is_dir() || !directory && !metadata.is_file() {
+        return Err("extraction input has the wrong file type".into());
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::MetadataExt;
+        if metadata.uid() != 0
+            || metadata.mode() & 0o022 != 0
+            || !directory && metadata.nlink() != 1
+        {
+            return Err(
+                "extraction inputs must be root-owned and not writable by other users".into(),
+            );
+        }
+        for ancestor in path.ancestors().skip(1) {
+            let metadata = fs::symlink_metadata(ancestor).map_err(|error| error.to_string())?;
+            if metadata.uid() != 0 || metadata.mode() & 0o022 != 0 && metadata.mode() & 0o1000 == 0
+            {
+                return Err("extraction input ancestor is not protected by root".into());
+            }
+        }
     }
     Ok(())
 }

@@ -148,8 +148,9 @@ fn ecosystem_archives_are_deterministic_and_signed_with_computed_identities() {
         );
         for path in [&metadata_path, &pack_path] {
             let signed = manifest
-                .artifacts
+                .extensions
                 .iter()
+                .flat_map(|extension| &extension.artifacts)
                 .find(|artifact| &artifact.path == path)
                 .unwrap();
             assert_eq!(signed.sha256, sha256_file(&first.join(path)).unwrap());
@@ -286,8 +287,9 @@ fn go_cross_pack_binds_host_tools_and_arm_standard_library_separately() {
             let manifest = result.unwrap();
             assert!(
                 manifest
-                    .artifacts
+                    .extensions
                     .iter()
+                    .flat_map(|extension| &extension.artifacts)
                     .any(|file| file.path == "runtime/go/linux-aarch64/runtime.pack")
             );
         }
@@ -295,6 +297,7 @@ fn go_cross_pack_binds_host_tools_and_arm_standard_library_separately() {
 }
 
 #[test]
+#[cfg(target_arch = "x86_64")]
 fn sandbox_cross_assets_preserve_loader_mode_and_validate_deployment_target() {
     let mut files = vec![
         ("bin/bwrap".into(), native_elf::static_executable()),
@@ -312,7 +315,7 @@ fn sandbox_cross_assets_preserve_loader_mode_and_validate_deployment_target() {
         bytes[18..20].copy_from_slice(&183u16.to_le_bytes());
     }
     dever_sandbox::validate_assets_for_target(&files, "linux-aarch64").unwrap();
-    let mut author = Author::new();
+    let mut author = super::targets::cross_author();
     let inputs = files
         .iter()
         .map(|(path, bytes)| {

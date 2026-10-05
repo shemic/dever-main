@@ -140,9 +140,9 @@ fn official_asset_names_are_versioned_and_platform_specific() {
         )
     );
     assert_eq!(
-        source.asset("1.2.3", "tar.gz"),
+        source.asset("1.2.3", "tar.zst"),
         format!(
-            "{OFFICIAL_RELEASES}/download/v1.2.3/dever-{}.tar.gz",
+            "{OFFICIAL_RELEASES}/download/v1.2.3/dever-{}.tar.zst",
             platform_identity()
         )
     );
@@ -219,9 +219,133 @@ fn compressed_release(core: &[u8]) -> Vec<u8> {
         ("dever-core", core),
         ("skills/dever-language/SKILL.md", b"skill"),
     ]);
-    let mut gzip = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::fast());
-    gzip.write_all(&bytes).unwrap();
-    gzip.finish().unwrap()
+    compressed(&bytes)
+}
+
+fn compressed(bytes: &[u8]) -> Vec<u8> {
+    let mut encoder = zstd::stream::write::Encoder::new(Vec::new(), 1).unwrap();
+    encoder.include_checksum(true).unwrap();
+    encoder.write_all(bytes).unwrap();
+    encoder.finish().unwrap()
+}
+
+#[test]
+fn zstandard_frames_require_checksum_bounded_window_and_exact_eof() {
+    let tar = archive(&[("dever-core", b"core")]);
+    let good = compressed(&tar);
+    let root = Download::new(&std::env::temp_dir()).unwrap();
+    super::super::release_archive::extract(good.as_slice(), &root.0, &manifest().artifacts)
+        .unwrap();
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        assert_eq!(
+            fs::metadata(root.0.join("dever-core"))
+                .unwrap()
+                .permissions()
+                .mode()
+                & 0o777,
+            0o755,
+            "signed executable roles retain execution after extraction"
+        );
+    }
+    let mut bad_checksum = good.clone();
+    *bad_checksum.last_mut().unwrap() ^= 1;
+    let mut concatenated = good.clone();
+    concatenated.extend(&good);
+    let mut garbage = good.clone();
+    garbage.push(0);
+    let oversized_window = vec![
+        0x28,
+        0xb5,
+        0x2f,
+        0xfd,
+        4,
+        (28 - 10) << 3,
+        1,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+    ];
+    for bytes in [
+        bad_checksum,
+        concatenated,
+        garbage,
+        oversized_window,
+        good[..good.len() - 1].to_vec(),
+        zstd::stream::encode_all(tar.as_slice(), 1).unwrap(),
+    ] {
+        let root = Download::new(&std::env::temp_dir()).unwrap();
+        assert!(
+            super::super::release_archive::extract(
+                bytes.as_slice(),
+                &root.0,
+                &manifest().artifacts
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn tar_trailers_and_same_sized_corruption_are_rejected() {
+    let tar = archive(&[("dever-core", b"core")]);
+    let mut nonzero_tail = tar.clone();
+    nonzero_tail.push(1);
+    let mut nonzero_padding = tar.clone();
+    nonzero_padding[516] = 1;
+    for bytes in [
+        nonzero_tail,
+        nonzero_padding,
+        tar[..tar.len() - 512].to_vec(),
+        archive(&[("dever-core", b"evil")]),
+    ] {
+        let root = Download::new(&std::env::temp_dir()).unwrap();
+        assert!(
+            super::super::release_archive::extract(
+                compressed(&bytes).as_slice(),
+                &root.0,
+                &manifest().artifacts
+            )
+            .is_err()
+        );
+    }
+}
+
+#[test]
+fn signed_extensions_cannot_duplicate_or_escape_their_typed_namespace() {
+    use super::super::{BuildTarget, Extension, ExtensionKind};
+    use crate::libs::Ecosystem;
+    let mut catalog = manifest();
+    catalog.extensions.push(Extension {
+        kind: ExtensionKind::Runtime(Ecosystem::Pip),
+        target: BuildTarget::LinuxX86_64,
+        artifacts: vec![Artifact {
+            path: "runtime/pip/linux-x86_64/runtime.pack".into(),
+            bytes: 4,
+            sha256: catalog.artifacts[0].sha256.clone(),
+        }],
+    });
+    validate_catalog(&catalog).unwrap();
+    assert_eq!(
+        catalog.extensions[0].id().asset_suffix(),
+        "ext-runtime-pip-linux-x86_64.tar.zst"
+    );
+    let mut duplicate = catalog.clone();
+    duplicate.extensions.push(duplicate.extensions[0].clone());
+    assert!(validate_catalog(&duplicate).is_err());
+    for path in [
+        "dever-core",
+        "runtime/npm/linux-x86_64/runtime.pack",
+        "runtime/pip/linux-aarch64/runtime.pack",
+        "runtime/pip/linux-x86_64/../escape",
+    ] {
+        catalog.extensions[0].artifacts[0].path = path.into();
+        assert!(validate_catalog(&catalog).is_err(), "{path}");
+    }
 }
 
 #[test]
